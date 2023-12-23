@@ -86,15 +86,15 @@ pub fn console_log(s: impl Display) {
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 enum Route {
-    #[at("/")]
+    #[at("/scrivenwright")]
     Home,
-    #[at("/projects")]
+    #[at("/scrivenwright/projects")]
     AllProjects,
-    #[at("/projects/:name")]
+    #[at("/scrivenwright/projects/:name")]
     Project { name: String },
-    #[at("/blog")]
+    #[at("/scrivenwright/blog")]
     Blog,
-    #[at("/blog/:name")]
+    #[at("/scrivenwright/blog/:name")]
     Post { name: String },
 }
 
