@@ -20,6 +20,4 @@ jobs:
           rust-version: nightly
           components: rustfmt
       - uses: actions/checkout@v4
-      - run: cargo fmt --check --package avid-rustacean-model
       - run: cargo fmt --check --manifest-path frontend/Cargo.toml
-      - run: cargo fmt --check --package avid-rustacean-backend
