@@ -1,0 +1,16 @@
+[package]
+name = "booktyping"
+version = "0.1.0"
+authors = ["Jesse Slater <jsssltr@gmail.com>"]
+edition = "2021"
+
+
+[dependencies]
+crossterm = "0.27.0"
+dirs = "5.0.1"
+ratatui = "0.24.0"
+regex = "1.10.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0.108"
+chrono = { version = "0.4.31", features = ["serde"] }
+deunicode = "1.4.1"

@@ -1,16 +1,8 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::cell::RefCell;
 
-use avid_rustacean_model::{GruvboxColor, MdNode, ParsedCode};
 use ratatui::{
     prelude::*,
     widgets::{block::Title, *},
-};
-use yew::Context;
-
-use crate::{
-    app::TermApp,
-    palette::GruvboxExt,
-    terminal::{DehydratedSpan, NeedsHydration},
 };
 
 /// A container for managing the logic for a well-formated scroll bar.
@@ -100,134 +92,6 @@ impl ScrollRef {
 // Remember the order:
 // Span -> Line -> Text (-> Paragraph)
 
-/// A container for pre-parsing and storing markdown
-#[derive(Debug, Default, PartialEq, Eq, Clone)]
-pub struct Markdown {
-    title: String,
-    /// The lines of the paragraph
-    lines: Vec<MdLine>,
-    /// Any links contained within the document
-    links: HashMap<String, String>,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum MdLine {
-    Plain(Line<'static>),
-    Code(Line<'static>),
-}
-
-impl MdLine {
-    fn as_line(&self, width: usize) -> Line<'static> {
-        match self {
-            MdLine::Plain(line) => line.clone(),
-            MdLine::Code(code) => {
-                let mut code = code.clone();
-                let len = code.spans.iter().fold(0, |acc, s| acc + s.width());
-                if len == 0 {
-                    code.spans = vec![
-                        Span::styled(" ".repeat(width), GruvboxColor::dark_3().bg_style()),
-                        Span::styled("\u{200b}", GruvboxColor::dark_3().bg_style()),
-                    ];
-                } else {
-                    code.spans.push(Span::styled(
-                        " ".repeat(width.saturating_sub(len % width)),
-                        GruvboxColor::dark_3().bg_style(),
-                    ));
-                }
-                code
-            }
-        }
-    }
-}
-
-impl Markdown {
-    pub fn new(title: String, md: avid_rustacean_model::Markdown) -> Self {
-        let mut links = HashMap::new();
-        let widgets = render_markdown(md, &mut links);
-        Self {
-            lines: widgets,
-            links,
-            title,
-        }
-    }
-
-    pub fn hydrate(&self, _ctx: &Context<TermApp>, span: &mut DehydratedSpan) {
-        if let Some(link) = self.links.get(span.text()) {
-            span.hyperlink(link.clone());
-        }
-    }
-
-    fn get_para(&self, width: usize) -> Paragraph<'static> {
-        let lines: Vec<_> = self.lines.iter().map(|l| l.as_line(width)).collect();
-        Paragraph::new(lines)
-            .block(
-                Block::new()
-                    .title(padded_title(
-                        self.title.clone(),
-                        GruvboxColor::yellow()
-                            .full_style(GruvboxColor::dark_3())
-                            .bold(),
-                    ))
-                    .border_style(GruvboxColor::pink().fg_style())
-                    .title_alignment(Alignment::Center)
-                    .borders(Borders::all()),
-            )
-            .wrap(Wrap { trim: false })
-    }
-
-    pub fn draw(&self, scroll: &ScrollRef, rect: Rect, frame: &mut Frame<'_>) {
-        let chunks = Layout::new(
-            Direction::Horizontal,
-            [
-                Constraint::Percentage(25),
-                Constraint::Percentage(50),
-                Constraint::Percentage(25),
-            ],
-        )
-        .split(rect);
-        let para = self.get_para(chunks[1].width.saturating_sub(2) as usize);
-        scroll.set_content_length(para.line_count(chunks[1].width.saturating_sub(2)));
-        let view_start = scroll.view_start();
-        frame.render_widget(para.scroll((view_start as u16, 0)), chunks[1]);
-    }
-}
-
-/// Renders an markdown document and returns the number of lines needed to display it
-pub fn render_markdown(
-    md: avid_rustacean_model::Markdown,
-    links: &mut HashMap<String, String>,
-) -> Vec<MdLine> {
-    let mut lines = vec![MdLine::Plain(Line::raw(""))];
-    for node in md.0.into_iter() {
-        match node {
-            MdNode::Paragraph(nodes) => {
-                lines.push(MdLine::Plain(render_paragraph(nodes, links)));
-                lines.push(MdLine::Plain(Line::raw("\n")));
-            }
-            MdNode::Code(code) => {
-                lines.extend(render_code(code).into_iter());
-                lines.push(MdLine::Plain(Line::raw("\n")));
-            }
-            MdNode::BlockQuote(block) => lines.push(MdLine::Plain(Line::styled(
-                block,
-                GruvboxColor::orange().full_style(GruvboxColor::dark_3()),
-            ))),
-            MdNode::Heading(text) => {
-                let line = Line::styled(
-                    format!("<----- {text} ----->"),
-                    GruvboxColor::yellow().fg_style(),
-                )
-                .alignment(Alignment::Center);
-                lines.push(MdLine::Plain(line));
-                lines.push(MdLine::Plain(Line::raw("")));
-            }
-            // TODO: The rest of these should not be free standing...
-            _ => unreachable!("How did you get here? Please open an issue on Github"),
-        }
-    }
-
-    lines
-}
 
 pub fn padded_title(title: String, style: Style) -> Title<'static> {
     vec![
@@ -238,56 +102,4 @@ pub fn padded_title(title: String, style: Style) -> Title<'static> {
         Span::from(" "),
     ]
     .into()
-}
-
-fn render_paragraph(nodes: Vec<MdNode>, links: &mut HashMap<String, String>) -> Line<'static> {
-    let mut spans = Vec::with_capacity(nodes.len());
-    for node in nodes.into_iter() {
-        match node {
-            MdNode::BlockQuote(s) => spans.push(Span::styled(
-                s,
-                GruvboxColor::yellow().full_style(GruvboxColor::dark_3()),
-            )),
-            MdNode::InlineCode(s) => spans.push(Span::styled(
-                s,
-                GruvboxColor::burnt_orange().full_style(GruvboxColor::dark_3()),
-            )),
-            MdNode::Emphasis(s) => spans.push(Span::styled(s, Style::new().italic())),
-            MdNode::Link(s, link) => {
-                links.insert(s.clone(), link);
-                spans.push(Span::styled(
-                    s,
-                    GruvboxColor::blue().fg_style().to_hydrate(),
-                ))
-            }
-            MdNode::Strong(s) => spans.push(Span::styled(s, Style::new().bold())),
-            MdNode::Text(s) => spans.push(Span::raw(s)),
-            // TODO: Dunno yet
-            MdNode::List(_) => todo!(),
-            MdNode::ThematicBreak => todo!(),
-            MdNode::Break => todo!(),
-            // These won't happen
-            MdNode::Heading(_) | MdNode::Paragraph(_) | MdNode::Code(_) => {}
-        }
-    }
-    Line::from(spans)
-}
-
-fn render_code(code: ParsedCode) -> Vec<MdLine> {
-    let mut digest = Vec::new();
-    let mut spans = Vec::with_capacity(code.0.len());
-    for (txt, (fg, _)) in code.0 {
-        let mut iter = txt.split('\n').map(ToOwned::to_owned);
-        if let Some(span) = iter.next() {
-            spans.push(Span::styled(span, fg.full_style(GruvboxColor::dark_3())))
-        }
-        for line in iter {
-            digest.push(MdLine::Code(Line::from(std::mem::take(&mut spans))));
-            spans.push(Span::styled(line, fg.full_style(GruvboxColor::dark_3())))
-        }
-    }
-    if !spans.is_empty() {
-        digest.push(MdLine::Code(Line::from(std::mem::take(&mut spans))));
-    }
-    digest
 }

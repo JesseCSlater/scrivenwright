@@ -12,7 +12,7 @@ use crate::{
     app::{ComponentMsg, TermApp},
     palette::GruvboxExt,
     terminal::DehydratedSpan,
-    utils::{padded_title, render_markdown, MdLine, ScrollRef},
+    utils::{padded_title, ScrollRef},
 };
 
 #[derive(Debug, PartialEq)]
@@ -56,14 +56,7 @@ impl Home {
     pub fn update(&mut self, msg: HomeMessage) {
         match msg {
             HomeMessage::Data(data) => {
-                let lines: Vec<_> = render_markdown(data.body, &mut self.links)
-                    .into_iter()
-                    .filter_map(|l| match l {
-                        MdLine::Plain(l) => Some(l),
-                        MdLine::Code(_) => None,
-                    })
-                    .collect();
-                self.data = Paragraph::new(lines)
+                self.data = Paragraph::new(data.body)
                     .wrap(Wrap { trim: true })
                     .block(
                         Block::new()

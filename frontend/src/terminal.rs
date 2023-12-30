@@ -205,7 +205,7 @@ impl WebTerm {
                     }
                 }
             }
-            buffer.push(html! { <pre> { for inner.drain(0..) } </pre> })
+            buffer.push(html! { for inner.drain(0..)  });
         }
         html! { <div id="the_terminal"> { for buffer.into_iter() } </div> }
     }
@@ -283,11 +283,11 @@ fn create_span_with_callback(
 ) -> Html {
     let fg = to_css_color(fg).unwrap_or(GruvboxColor::default_fg().to_color_str().into());
     let bg = to_css_color(bg).unwrap_or(GruvboxColor::default_bg().to_color_str().into());
-    let mut style = format!("color: {fg}; background-color: {bg};");
+    let mut style = format!("color: {fg}; background-color: {bg}; white-space: pre;");
     extend_css(mods, &mut style);
     match cb {
         Some(cb) => html! { <span style={ style } onclick = { cb }> { text } </span> },
-        None => html! { <span style={ style }> { text } </span> },
+        None => html! { <span style={ style }> { text.to_owned() } </span> },
     }
 }
 
@@ -318,19 +318,11 @@ fn to_css_color(c: Color) -> Option<Cow<'static, str>> {
 /// Calculates the number of characters that can fit in the window.
 pub fn get_window_size() -> (u16, u16) {
     let (w, h) = get_raw_window_size();
-    // These are mildly magical numbers... make them more precise
-    (w / 10, h / 19)
+    //TODO fix magic numbers
+    ((w / 10) as u16, (h / 22) as u16)
 }
 
-/*
-/// Calculates the number of characters that can fit in the Ratatui buffer.
-pub fn get_max_window_size() -> (u16, u16) {
-    let (w, h) = get_raw_window_size();
-    (w / 10, u16::MAX / ( w / 10 ))
-}
-*/
-
-fn get_raw_window_size() -> (u16, u16) {
+fn get_raw_window_size() -> (usize, usize) {
     fn js_val_to_int<I: TryFrom<usize>>(val: JsValue) -> Option<I> {
         val.as_f64().and_then(|i| I::try_from(i as usize).ok())
     }
@@ -339,8 +331,8 @@ fn get_raw_window_size() -> (u16, u16) {
         .and_then(|s| {
             s.inner_width()
                 .ok()
-                .and_then(js_val_to_int::<u16>)
-                .zip(s.inner_height().ok().and_then(js_val_to_int::<u16>))
+                .and_then(js_val_to_int::<usize>)
+                .zip(s.inner_height().ok().and_then(js_val_to_int::<usize>))
         })
         .unwrap_or((120, 120))
 }

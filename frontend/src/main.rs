@@ -27,11 +27,8 @@ use yew::{function_component, html, Html};
 use yew_router::prelude::*;
 
 pub mod app;
-pub mod blog;
 pub mod home;
 pub mod palette;
-pub mod posts;
-pub mod project;
 pub mod terminal;
 pub mod utils;
 
@@ -88,23 +85,11 @@ pub fn console_log(s: impl Display) {
 enum Route {
     #[at("/scrivenwright")]
     Home,
-    #[at("/scrivenwright/projects")]
-    AllProjects,
-    #[at("/scrivenwright/projects/:name")]
-    Project { name: String },
-    #[at("/scrivenwright/blog")]
-    Blog,
-    #[at("/scrivenwright/blog/:name")]
-    Post { name: String },
 }
 
 fn switch(route: Route) -> Html {
     match route {
         Route::Home => html! { <TermApp body = { AppBodyProps::Home } /> },
-        Route::AllProjects => html! { <TermApp body = { AppBodyProps::AllProjects } /> },
-        Route::Project { name } => html! { <TermApp body = { AppBodyProps::Project(name) } /> },
-        Route::Blog => html! { <TermApp body = { AppBodyProps::Blog } /> },
-        Route::Post { name } => html! { <TermApp body = { AppBodyProps::Post(name) } /> },
     }
 }
 
