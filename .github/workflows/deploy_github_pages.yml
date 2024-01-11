@@ -38,7 +38,7 @@ jobs:
 
       - name: Build the Rust WASM app and all of its assets
         run: |
-          cd frontend
+          cd web_app
           trunk build --public-url ${{ github.event.repository.name }}
           cd ..
 
@@ -47,7 +47,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          path: './frontend/dist'
+          path: './web_app/dist'
 
   deploy:
     needs: build
