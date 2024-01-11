@@ -20,4 +20,6 @@ jobs:
           rust-version: nightly
           components: rustfmt
       - uses: actions/checkout@v4
-      - run: cargo fmt --check --manifest-path frontend/Cargo.toml
+      - run: cargo fmt --check --manifest-path scrivenwright/Cargo.toml
+      - run: cargo fmt --check --manifest-path terminal_app/Cargo.toml
+      - run: cargo fmt --check --manifest-path web_app/Cargo.toml
