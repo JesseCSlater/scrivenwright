@@ -1,5 +1,5 @@
-use scrivenwright::app::AppResult;
 use crossterm::event::{self, Event as CrosstermEvent, KeyEvent};
+use scrivenwright::app::AppResult;
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};

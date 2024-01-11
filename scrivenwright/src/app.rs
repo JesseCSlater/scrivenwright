@@ -10,7 +10,7 @@ pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
 pub struct App {
     pub running: bool,
-    save : Box<dyn Fn(Vec<Test>, Vec<KeyPress>) -> AppResult<()>>,
+    save: Box<dyn Fn(Vec<Test>, Vec<KeyPress>) -> AppResult<()>>,
     book_text: String,
     keypress_log: Vec<KeyPress>,
     test_log: Vec<Test>,
@@ -29,14 +29,16 @@ pub struct App {
 
 impl App {
     pub fn new<F>(
-        terminal_width: u16, 
-        book_text: String, 
+        terminal_width: u16,
+        book_text: String,
         test_log: Vec<Test>,
-        save: F
-    ) -> AppResult<Self> 
-    where F: Fn(Vec<Test>, Vec<KeyPress>) -> AppResult<()> + 'static, {
+        save: F,
+    ) -> AppResult<Self>
+    where
+        F: Fn(Vec<Test>, Vec<KeyPress>) -> AppResult<()> + 'static,
+    {
         let mut ret = Self {
-            save : Box::new(save),
+            save: Box::new(save),
             terminal_width,
             book_text,
             test_log,
@@ -56,11 +58,11 @@ impl App {
 
         ret.get_next_sample()?;
         ret.generate_lines();
-        
+
         Ok(ret)
     }
 
-    pub fn quit(&mut self) -> AppResult<()>{
+    pub fn quit(&mut self) -> AppResult<()> {
         self.running = false;
         (self.save)(self.test_log.clone(), self.keypress_log.clone())
     }
@@ -103,7 +105,7 @@ impl App {
     }
 
     pub fn generate_lines(&mut self) {
-        let max_line_len = 
+        let max_line_len =
             (self.terminal_width as f64 * (self.text_width_percent as f64 / 100.0)) as usize;
         let mut lines = Vec::new();
         let mut line_index: Vec<(usize, usize)> = Vec::new();
@@ -184,7 +186,8 @@ impl App {
             .filter(|&len| len > 5)
             .count();
 
-        let full = self.book_text
+        let full = self
+            .book_text
             .chars()
             .skip(start_index)
             .take(best)
@@ -206,7 +209,8 @@ impl App {
     }
 
     pub fn get_rolling_average(&self) -> AppResult<usize> {
-        Ok(self.test_log
+        Ok(self
+            .test_log
             .iter()
             .map(|t| t.end_index - t.start_index)
             .filter(|&len| len > 5)

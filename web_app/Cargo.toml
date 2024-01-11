@@ -9,8 +9,8 @@ lto = true
 opt-level="z"
 
 [dependencies]
-# Using my fork for now as I need access to the paragraph line count method that I implemented
-ratatui = { version = "0.25", default-features = false, features = ["all-widgets", "unstable-rendered-line-info"] }
+scrivenwright = { path = "../scrivenwright" }
+ratatui = { version = "0.25", default-features = false}
 yew = { version = "0.21", features = ["csr"] }
 web-sys = { version = "0.3", features = ["Window", "Screen"] }
 wasm-bindgen = { version = "0.2" }
