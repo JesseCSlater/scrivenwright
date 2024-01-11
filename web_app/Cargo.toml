@@ -1,8 +1,19 @@
 [package]
-name = "yew-app"
+name = "scrivenwright-web"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+# Reduces the binary size of the WASM file.
+lto = true
+opt-level="z"
+
 [dependencies]
-# this is the development version of Yew
-yew = { git = "https://github.com/yewstack/yew/", features = ["csr"] }
+# Using my fork for now as I need access to the paragraph line count method that I implemented
+ratatui = { version = "0.25", default-features = false, features = ["all-widgets", "unstable-rendered-line-info"] }
+yew = { version = "0.21", features = ["csr"] }
+web-sys = { version = "0.3", features = ["Window", "Screen"] }
+wasm-bindgen = { version = "0.2" }
+js-sys = { version = "0.3" }
+send_wrapper = "0.6.0"
+derive_more = "0.99.17"

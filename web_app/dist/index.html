@@ -1,14 +1,37 @@
-<!DOCTYPE html><html><head>
-        <meta charset="utf-8">
-        <title>Yew App</title>
-    
-<link rel="preload" href="/yew-app-5b5317b4f4473cb2d818a95c30850b7c10721af02a489ac4926805f4377ab8ece8f79d70adc9a797e8723f1cca47e2d4_bg.wasm" as="fetch" type="application/wasm" crossorigin="anonymous" integrity="sha384-W1MXtPRHPLLYGKlcMIULfBByGvAqSJrEkmgF9Dd6uOzo951wrcmnl-hyPxzKR-LU">
-<link rel="modulepreload" href="/yew-app-5b5317b4f4473cb2d818a95c30850b7c10721af02a489ac4926805f4377ab8ece8f79d70adc9a797e8723f1cca47e2d4.js" crossorigin="anonymous" integrity="sha384-nMXs543tgoM7dMxYy40WBz-SnHb2bZyzT81b290vK95shoFRkEcHRzDPzx1qlXRh"></head>
-    <body>
+<!DOCTYPE html><html lang="en"><head> <meta charset="UTF-8"><link href="https://fonts.googleapis.com/css?family=Roboto Mono" rel="stylesheet"><style>
+	body {
+		font-family: 'Source Code Pro', monospace;
+		font-size: 16px;
+		background-color: darkslategrey;
+		margin: 0;
+	}
+	#the_terminal {
+		font-family: 'Source Code Pro', monospace;
+		width: fit-content;
+		block-size: fit-content;
+		border-collapse: collapse;
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+	}
+	th, td {
+		padding: 0;
+	}
+</style>
+<link rel="preload" href="/scrivenwright-web-e55d9f54db0f62c0b46efd08a0125fea810fbd4facc7e7e90ecb232609b1210f5f0476d64e9fe3827f788c36f2494899_bg.wasm" as="fetch" type="application/wasm" crossorigin="anonymous" integrity="sha384-5V2fVNsPYsC0bv0IoBJf6oEPvU-sx-fpDssjJgmxIQ9fBHbWTp_jgn94jDbySUiZ">
+<link rel="modulepreload" href="/scrivenwright-web-e55d9f54db0f62c0b46efd08a0125fea810fbd4facc7e7e90ecb232609b1210f5f0476d64e9fe3827f788c36f2494899.js" crossorigin="anonymous" integrity="sha384-KdLkxbYcelvyYebGbQ861-yIm8Fqim0VxJKx7URYc0qs4erlT27CfgnFylekMmAg"></head>
+
+
+
+<body> 
+<script> </script>
+
+
 
 <script type="module">
-import init, * as bindings from '/yew-app-5b5317b4f4473cb2d818a95c30850b7c10721af02a489ac4926805f4377ab8ece8f79d70adc9a797e8723f1cca47e2d4.js';
-init('/yew-app-5b5317b4f4473cb2d818a95c30850b7c10721af02a489ac4926805f4377ab8ece8f79d70adc9a797e8723f1cca47e2d4_bg.wasm');
+import init, * as bindings from '/scrivenwright-web-e55d9f54db0f62c0b46efd08a0125fea810fbd4facc7e7e90ecb232609b1210f5f0476d64e9fe3827f788c36f2494899.js';
+init('/scrivenwright-web-e55d9f54db0f62c0b46efd08a0125fea810fbd4facc7e7e90ecb232609b1210f5f0476d64e9fe3827f788c36f2494899_bg.wasm');
 window.wasmBindings = bindings;
 
 </script><script>"use strict";

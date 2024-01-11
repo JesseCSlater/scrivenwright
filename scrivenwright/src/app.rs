@@ -1,24 +1,19 @@
 use chrono::{serde::ts_nanoseconds, DateTime, Utc};
-use deunicode::deunicode;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::{error, fs, fs::File, io::Read, io::Seek, io::Write};
+use std::error;
 
 pub const DEFAULT_TEXT_WIDTH_PERCENT: u16 = 60;
 pub const FULL_TEXT_WIDTH_PERCENT: u16 = 95;
 const STARTING_SAMPLE_SIZE: usize = 100;
 
-/// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
-/// Application.
-#[derive(Debug)]
 pub struct App {
-    /// Is the application running?
     pub running: bool,
+    save : Box<dyn Fn(Vec<Test>, Vec<KeyPress>) -> AppResult<()>>,
     book_text: String,
-    keypress_log: File,
-    test_log: File,
+    keypress_log: Vec<KeyPress>,
+    test_log: Vec<Test>,
     pub book_lines: Vec<String>,
     pub line_index: Vec<(usize, usize)>,
     pub sample_start_index: usize,
@@ -33,48 +28,41 @@ pub struct App {
 }
 
 impl App {
-    /// Constructs a new instance of [`App`].
-    pub fn new(book_title: &str, terminal_width: u16) -> AppResult<Self> {
-        
-        let book_text = App::load_book(book_title)?;
-
-        let _ = fs::create_dir(
-            dirs::home_dir()
-                .unwrap()
-                .join(".booktyping")
-                .join(book_title),
-        );
-
-        let mut test_log = App::get_test_log(book_title)?;
-
-        let (sample_start_index, sample_len) = App::get_next_sample(&mut test_log, &book_text)?;
-
+    pub fn new<F>(
+        terminal_width: u16, 
+        book_text: String, 
+        test_log: Vec<Test>,
+        save: F
+    ) -> AppResult<Self> 
+    where F: Fn(Vec<Test>, Vec<KeyPress>) -> AppResult<()> + 'static, {
         let mut ret = Self {
-            running: true,
-            keypress_log: App::get_keypress_log(book_title)?,
-            start_time: Utc::now(), 
-            cur_char: 0,
-            test_log,
-            book_text,
-            sample_start_index,
-            sample_len,
+            save : Box::new(save),
             terminal_width,
+            book_text,
+            test_log,
+            running: true,
+            cur_char: 0,
             following_typing: true,
             text_width_percent: DEFAULT_TEXT_WIDTH_PERCENT,
             full_text_width: false,
+            start_time: Default::default(),
+            keypress_log: Default::default(),
+            sample_len: Default::default(),
+            sample_start_index: Default::default(),
             book_lines: Default::default(),
             line_index: Default::default(),
             display_line: Default::default(),
         };
 
+        ret.get_next_sample()?;
         ret.generate_lines();
         
         Ok(ret)
     }
 
-    /// Set running to false to quit the application.
-    pub fn quit(&mut self) {
+    pub fn quit(&mut self) -> AppResult<()>{
         self.running = false;
+        (self.save)(self.test_log.clone(), self.keypress_log.clone())
     }
 
     pub fn handle_char(&mut self, c: char) -> AppResult<()> {
@@ -92,64 +80,26 @@ impl App {
             self.cur_char += 1
         }
         if !correct || self.cur_char == self.sample_len {
-            self.log_test(correct)?;
+            self.test_log.push(Test {
+                succeeded: correct,
+                start_index: self.sample_start_index,
+                end_index: self.sample_start_index + self.cur_char,
+                started: self.start_time,
+                completed: Utc::now(),
+            });
             self.start_time = Utc::now();
-            (self.sample_start_index, self.sample_len) =
-                App::get_next_sample(&mut self.test_log, &self.book_text)?;
+            self.get_next_sample()?;
 
             self.cur_char = 0;
         }
 
-        let log_entry = serde_json::to_vec(&KeyPress {
+        let log_entry = &KeyPress {
             correct,
             key: c,
             time: Utc::now(),
-        })
-        .unwrap();
-        self.keypress_log.write_all(&log_entry)?;
+        };
+        self.keypress_log.push(log_entry.clone());
         Ok(())
-    }
-
-    fn load_book(book_title: &str) -> AppResult<String> {
-        Ok(deunicode(
-            &Regex::new(r"\s+")
-                .unwrap()
-                .replace_all(
-                    &fs::read_to_string(
-                        dirs::home_dir()
-                            .unwrap()
-                            .join(".booktyping")
-                            .join(format!("{}.txt", book_title)),
-                    )?
-                    .trim(),
-                    " ",
-                )
-                .to_string(),
-        ))
-    }
-
-    fn get_keypress_log(book_title: &str) -> AppResult<fs::File> {
-        Ok(fs::OpenOptions::new().create(true).append(true).open(
-            dirs::home_dir()
-                .unwrap()
-                .join(".booktyping")
-                .join(book_title)
-                .join("keypresses.json"),
-        )?)
-    }
-
-    fn get_test_log(book_title: &str) -> AppResult<fs::File> {
-        Ok(fs::OpenOptions::new()
-            .create(true)
-            .read(true)
-            .write(true)
-            .open(
-                dirs::home_dir()
-                    .unwrap()
-                    .join(".booktyping")
-                    .join(book_title)
-                    .join("tests.json"),
-            )?)
     }
 
     pub fn generate_lines(&mut self) {
@@ -198,14 +148,11 @@ impl App {
         self.line_index = line_index;
     }
 
-    fn get_next_sample(test_log: &mut File, book_text: &str) -> AppResult<(usize, usize)> {
-        let mut string = String::new();
-        test_log.seek(std::io::SeekFrom::Start(0))?;
-        test_log.read_to_string(&mut string)?;
-        let tests: Vec<Test> = serde_json::from_str(&string).unwrap_or(Vec::new());
+    fn get_next_sample(&mut self) -> AppResult<()> {
+        let tests = &self.test_log;
 
         let mut start_index = 0;
-        for t in &tests {
+        for t in tests {
             if t.succeeded && t.end_index > start_index {
                 start_index = t.end_index;
             }
@@ -237,7 +184,7 @@ impl App {
             .filter(|&len| len > 5)
             .count();
 
-        let full = book_text
+        let full = self.book_text
             .chars()
             .skip(start_index)
             .take(best)
@@ -252,18 +199,14 @@ impl App {
             .len()
             + 1;
 
-        let start_index = usize::min(start_index, book_text.len() - 1);
-        let len = usize::min(len, book_text.len() - start_index - 1);
-        Ok((start_index, len))
+        self.sample_start_index = usize::min(start_index, self.book_text.len() - 1);
+        self.sample_len = usize::min(len, self.book_text.len() - start_index - 1);
+        self.start_time = Utc::now();
+        Ok(())
     }
 
-    pub fn get_rolling_average(&mut self) -> AppResult<usize> {
-        let mut string = String::new();
-        self.test_log.seek(std::io::SeekFrom::Start(0))?;
-        self.test_log.read_to_string(&mut string)?;
-        let tests: Vec<Test> = serde_json::from_str(&string).unwrap_or(Vec::new());
-
-        Ok(tests
+    pub fn get_rolling_average(&self) -> AppResult<usize> {
+        Ok(self.test_log
             .iter()
             .map(|t| t.end_index - t.start_index)
             .filter(|&len| len > 5)
@@ -272,35 +215,18 @@ impl App {
             .sum::<usize>()
             / 10)
     }
-
-    fn log_test(&mut self, succeeded: bool) -> AppResult<()> {
-        let mut string = String::new();
-        self.test_log.seek(std::io::SeekFrom::Start(0))?;
-        self.test_log.read_to_string(&mut string)?;
-        let mut tests: Vec<Test> = serde_json::from_str(&string).unwrap_or(Vec::new());
-        tests.push(Test {
-            succeeded,
-            start_index: self.sample_start_index,
-            end_index: self.sample_start_index + self.cur_char,
-            started: self.start_time,
-            completed: Utc::now(),
-        });
-        self.test_log.seek(std::io::SeekFrom::Start(0))?;
-        self.test_log.write_all(&serde_json::to_vec(&tests)?)?;
-        Ok(())
-    }
 }
 
-#[derive(Serialize, Deserialize)]
-struct KeyPress {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct KeyPress {
     correct: bool,
     key: char,
     #[serde(with = "ts_nanoseconds")]
     time: DateTime<Utc>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct Test {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Test {
     succeeded: bool,
     start_index: usize,
     end_index: usize,

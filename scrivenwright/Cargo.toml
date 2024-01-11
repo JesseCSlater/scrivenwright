@@ -1,5 +1,5 @@
 [package]
-name = "booktyping"
+name = "scrivenwright"
 version = "0.1.0"
 authors = ["Jesse Slater <jsssltr@gmail.com>"]
 edition = "2021"

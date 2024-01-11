@@ -1,24 +1,79 @@
-use yew::prelude::*;
+#![warn(rust_2018_idioms)]
+#![deny(
+    rustdoc::broken_intra_doc_links,
+    unreachable_pub,
+    unreachable_patterns,
+    unused,
+    unused_qualifications,
+    while_true,
+    trivial_casts,
+    trivial_bounds,
+    trivial_numeric_casts,
+    unconditional_panic,
+    clippy::all
+)]
 
-#[function_component]
-fn App() -> Html {
-    let counter = use_state(|| 0);
-    let onclick = {
-        let counter = counter.clone();
-        move |_| {
-            let value = *counter + 1;
-            counter.set(value);
-        }
-    };
+use std::{
+    fmt::{Debug, Display},
+    ops::{Deref, DerefMut},
+    sync::{Mutex, MutexGuard, OnceLock},
+};
 
-    html! {
-        <div>
-            <button {onclick}>{ "+1" }</button>
-            <p>{ *counter }</p>
-        </div>
+use app::TermApp;
+use ratatui::prelude::*;
+use send_wrapper::SendWrapper;
+use terminal::WebTerm;
+
+pub mod app;
+pub mod terminal;
+
+pub static TERMINAL: Renderer = Renderer::new();
+
+pub struct Renderer(OnceLock<Mutex<SendWrapper<Terminal<WebTerm>>>>);
+
+impl Renderer {
+    pub const fn new() -> Self {
+        Self(OnceLock::new())
+    }
+
+    pub fn load(&self) {
+        self.0
+            .set(Mutex::new(SendWrapper::new(
+                Terminal::new(WebTerm::new()).unwrap(),
+            )))
+            .unwrap();
+    }
+
+    pub fn term(&'static self) -> impl 'static + DerefMut<Target = Terminal<WebTerm>> {
+        TermDeref(self.0.get().unwrap().lock().unwrap())
     }
 }
 
+struct TermDeref<'a>(MutexGuard<'a, SendWrapper<Terminal<WebTerm>>>);
+
+impl<'a> Deref for TermDeref<'a> {
+    type Target = Terminal<WebTerm>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'a> DerefMut for TermDeref<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+pub fn console_debug(s: impl Debug) {
+    web_sys::console::log_1(&format!("{s:?}").into())
+}
+
+pub fn console_log(s: impl Display) {
+    web_sys::console::log_1(&format!("{s}").into())
+}
+
 fn main() {
-    yew::Renderer::<App>::new().render();
+    TERMINAL.load();
+    yew::Renderer::<TermApp>::new().render();
 }

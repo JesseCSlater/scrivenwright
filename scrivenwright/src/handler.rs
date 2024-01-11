@@ -7,7 +7,7 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
     use KeyCode as C;
     const CTRL_ALT : KeyModifiers = M::ALT.union(M::CONTROL);
     match (key_event.modifiers, key_event.code) {
-        (M::CONTROL, C::Char('c')) => app.quit(),
+        (M::CONTROL, C::Char('c')) => app.quit()?,
         (M::CONTROL, C::Char('f')) => {
             app.full_text_width = !app.full_text_width;
             app.text_width_percent = 
@@ -40,8 +40,6 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
         (_, C::Esc) => {
             app.following_typing = true;
         }
- 
-
         _ => {}
     }
     Ok(())
