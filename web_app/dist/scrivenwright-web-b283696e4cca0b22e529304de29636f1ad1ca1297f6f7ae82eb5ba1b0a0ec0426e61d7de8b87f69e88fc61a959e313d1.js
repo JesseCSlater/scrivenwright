@@ -620,6 +620,14 @@ function __wbg_get_imports() {
         const ret = getObject(arg0).call(getObject(arg1));
         return addHeapObject(ret);
     }, arguments) };
+    imports.wbg.__wbg_getTime_9272be78826033e1 = function(arg0) {
+        const ret = getObject(arg0).getTime();
+        return ret;
+    };
+    imports.wbg.__wbg_new0_622c21a64f3d83ea = function() {
+        const ret = new Date();
+        return addHeapObject(ret);
+    };
     imports.wbg.__wbg_is_ff7acd231c75c0e4 = function(arg0, arg1) {
         const ret = Object.is(getObject(arg0), getObject(arg1));
         return ret;
@@ -669,20 +677,20 @@ function __wbg_get_imports() {
     imports.wbg.__wbindgen_throw = function(arg0, arg1) {
         throw new Error(getStringFromWasm0(arg0, arg1));
     };
-    imports.wbg.__wbindgen_closure_wrapper269 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper287 = function(arg0, arg1, arg2) {
         const ret = makeClosure(arg0, arg1, 45, __wbg_adapter_20);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper271 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper289 = function(arg0, arg1, arg2) {
         const ret = makeClosure(arg0, arg1, 49, __wbg_adapter_23);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper2635 = function(arg0, arg1, arg2) {
-        const ret = makeClosure(arg0, arg1, 320, __wbg_adapter_26);
+    imports.wbg.__wbindgen_closure_wrapper3186 = function(arg0, arg1, arg2) {
+        const ret = makeClosure(arg0, arg1, 335, __wbg_adapter_26);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper3566 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 408, __wbg_adapter_29);
+    imports.wbg.__wbindgen_closure_wrapper4117 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 423, __wbg_adapter_29);
         return addHeapObject(ret);
     };
 
@@ -725,7 +733,7 @@ async function __wbg_init(input) {
     if (wasm !== undefined) return wasm;
 
     if (typeof input === 'undefined') {
-        input = new URL('scrivenwright-web-1a702cd95e49f1c6940f21b128eb750f7369407705b92ef8e0e43e183cef4c5a2b91fbbadc987658ec0321014b8180a2_bg.wasm', import.meta.url);
+        input = new URL('scrivenwright-web-b283696e4cca0b22e529304de29636f1ad1ca1297f6f7ae82eb5ba1b0a0ec0426e61d7de8b87f69e88fc61a959e313d1_bg.wasm', import.meta.url);
     }
     const imports = __wbg_get_imports();
 

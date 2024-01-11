@@ -20,7 +20,6 @@ pub struct App {
     pub sample_len: usize,
     start_time: DateTime<Utc>,
     pub cur_char: usize,
-    pub following_typing: bool,
     pub display_line: usize,
     pub text_width_percent: u16,
     pub terminal_width: u16,
@@ -44,7 +43,6 @@ impl App {
             test_log,
             running: true,
             cur_char: 0,
-            following_typing: true,
             text_width_percent: DEFAULT_TEXT_WIDTH_PERCENT,
             full_text_width: false,
             start_time: Default::default(),
@@ -68,9 +66,12 @@ impl App {
     }
 
     pub fn handle_char(&mut self, c: char) -> AppResult<()> {
-        if !self.following_typing {
-            self.following_typing = true;
-        }
+        let &(cur_line, _) = self
+            .line_index
+            .get(self.sample_start_index + self.cur_char)
+            .unwrap();
+        self.display_line = cur_line;
+
         let correct = c
             == self
                 .book_text

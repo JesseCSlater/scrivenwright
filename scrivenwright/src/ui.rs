@@ -10,7 +10,7 @@ use crate::app::App;
 
 //TODO fix panic on end of short input
 impl App {
-    pub fn render(&mut self, frame: &mut Frame) {
+    pub fn render(&self, frame: &mut Frame) {
         let &(start_line, start_offset) = self.line_index.get(self.sample_start_index).unwrap();
         let &(cur_line, cur_offset) = self
             .line_index
@@ -23,12 +23,6 @@ impl App {
         let mut lines: Vec<String> = self.book_lines.clone();
         let num_rows = frame.size().height as usize - 2;
         let rows_to_center = num_rows / 2 - 2;
-
-        if self.following_typing {
-            self.display_line = cur_line
-        }
-
-        self.display_line = usize::min(self.display_line, lines.len());
 
         let first_row = usize::checked_sub(rows_to_center, self.display_line).unwrap_or(0);
 

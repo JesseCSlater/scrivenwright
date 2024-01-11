@@ -113,7 +113,7 @@ impl Backend for WebTerm {
 
 pub fn get_window_size() -> (u16, u16) {
     let (w, h) = get_raw_window_size();
-    ((w / 10) as u16, (h / 22) as u16)
+    ((w / 20) as u16, (h / 44) as u16)
 }
 
 fn get_raw_window_size() -> (usize, usize) {

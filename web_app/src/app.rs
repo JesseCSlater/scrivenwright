@@ -1,13 +1,14 @@
-use crate::{console_log, TERMINAL};
+use crate::{console_log, TERMINAL, terminal::get_window_size};
 use js_sys::Function;
-use ratatui::{
-    prelude::*,
-    widgets::{Block, Borders},
-};
+use ratatui::prelude::*;
 use wasm_bindgen::prelude::Closure;
 use yew::prelude::*;
+use scrivenwright::app::{App, Test, KeyPress};
 
-pub struct TermApp {}
+
+pub struct TermApp {
+    app : App
+}
 
 #[derive(Debug)]
 pub enum TermAppMsg {
@@ -16,8 +17,8 @@ pub enum TermAppMsg {
 }
 
 impl TermApp {
-    fn draw(&self, area: Rect, frame: &mut Frame<'_>) {
-        frame.render_widget(Block::default().borders(Borders::ALL), area);
+    fn draw(&self, _area: Rect, frame: &mut Frame<'_>) {
+        self.app.render(frame)
     }
 }
 
@@ -34,7 +35,7 @@ impl Component for TermApp {
             .into();
         window.set_onresize(Some(&func));
 
-        let cb = ctx
+        let cb: Callback<KeyboardEvent> = ctx
             .link()
             .callback(|e: KeyboardEvent| TermAppMsg::KeyDown(e));
         let func: Function =
@@ -42,7 +43,18 @@ impl Component for TermApp {
                 .into_js_value()
                 .into();
         window.set_onkeydown(Some(&func));
-        Self {}
+
+        let book_text = "Text".into();
+
+        let tests = Vec::new();
+    
+        let save = move |_tests: Vec<Test>, _keypresses: Vec<KeyPress>| {
+            Ok(())
+        };
+    
+        let app = App::new(get_window_size().1, book_text, tests, save).expect("Failed to initialize");
+
+        Self {app}
     }
 
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
@@ -58,7 +70,7 @@ impl Component for TermApp {
     fn view(&self, _ctx: &Context<Self>) -> Html {
         let mut term = TERMINAL.term();
         let area = term.size().unwrap();
-        term.draw(|frame| self.draw(area, frame)).unwrap();
+        term.draw(|frame: &mut Frame<'_>| self.draw(area, frame)).unwrap();
         term.backend_mut().render()
     }
 }

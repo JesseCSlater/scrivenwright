@@ -5,8 +5,7 @@ use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use scrivenwright::app::{App, AppResult, KeyPress, Test};
-use scrivenwright::handler::{handle_key_events, KeyCode as K, KeyDown, KeyModifiers as M};
-use scrivenwright::tui::Tui;
+use scrivenwright::handler::{KeyCode as K, KeyDown, KeyModifiers as M};
 use std::panic;
 use std::{env, fs, io};
 
@@ -17,7 +16,7 @@ use crate::event::*;
 
 fn main() -> AppResult<()> {
     let backend = CrosstermBackend::new(io::stderr());
-    let terminal = Terminal::new(backend)?;
+    let mut terminal = Terminal::new(backend)?;
 
     let book_title = if let Some(arg_1) = env::args().collect::<Vec<_>>().get(1) {
         arg_1.clone()
@@ -57,30 +56,28 @@ fn main() -> AppResult<()> {
 
     let events = EventHandler::new(250);
 
-    let mut tui = Tui::new(terminal);
-
-    tui.init()?;
-    tui.draw(&mut app)?; //Draw first frame
+    terminal.hide_cursor()?;
+    terminal.clear()?;
+    terminal.draw(|frame| app.render(frame))?;
 
     // Start the main loop.
     while app.running {
         // Handle events.
         match events.next()? {
             Event::Key(key_event) => {
-                handle_key_events(to_key_down(key_event), &mut app)?;
-                tui.draw(&mut app)?;
+                app.handle_key_events(to_key_down(key_event))?;
             }
             Event::Resize(width, _) => {
                 app.terminal_width = width;
                 app.generate_lines();
-                tui.draw(&mut app)?;
             }
         }
+        terminal.draw(|frame| app.render(frame))?;
     }
 
     terminal::disable_raw_mode()?;
     crossterm::execute!(io::stderr(), LeaveAlternateScreen, DisableMouseCapture)?;
-    tui.exit()?;
+    terminal.show_cursor()?;
     Ok(())
 }
 
