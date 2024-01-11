@@ -1,11 +1,8 @@
-use crossterm::event::{
-    DisableMouseCapture, EnableMouseCapture, KeyCode as CK, KeyEvent, KeyModifiers as CM,
-};
+use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use scrivenwright::app::{App, AppResult, KeyPress, Test};
-use scrivenwright::handler::{KeyCode as K, KeyDown, KeyModifiers as M};
 use std::panic;
 use std::{env, fs, io};
 
@@ -65,7 +62,7 @@ fn main() -> AppResult<()> {
         // Handle events.
         match events.next()? {
             Event::Key(key_event) => {
-                app.handle_key_events(to_key_down(key_event))?;
+                app.handle_key_events(key_event)?;
             }
             Event::Resize(width, _) => {
                 app.terminal_width = width;
@@ -81,21 +78,4 @@ fn main() -> AppResult<()> {
     Ok(())
 }
 
-fn to_key_down(event: KeyEvent) -> KeyDown {
-    let code = match event.code {
-        CK::Char(c) => K::Char(c),
-        CK::Esc => K::Esc,
-        CK::Up => K::Up,
-        CK::Down => K::Down,
-        CK::Right => K::Right,
-        CK::Left => K::Left,
-        _ => K::Unimplemented,
-    };
-    let mods = match event.modifiers {
-        CM::SHIFT => M::Shift,
-        CM::CONTROL => M::Ctrl,
-        CM::ALT => M::Alt,
-        _ => M::Unimplemented,
-    };
-    KeyDown { code, mods }
-}
+

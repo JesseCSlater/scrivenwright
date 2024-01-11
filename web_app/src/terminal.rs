@@ -138,7 +138,7 @@ fn to_css_color(c: Color) -> Option<Cow<'static, str>> {
         Color::Red => Some("red".into()),
         Color::Green => Some("green".into()),
         Color::Yellow => Some("yellow".into()),
-        Color::Blue => Some("blue".into()),
+        Color::Blue => Some("dodgerblue".into()),
         Color::Magenta => Some("magenta".into()),
         Color::Cyan => Some("cyan".into()),
         Color::Gray => Some("gray".into()),

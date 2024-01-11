@@ -1,8 +1,10 @@
 use crate::app::{App, AppResult, DEFAULT_TEXT_WIDTH_PERCENT, FULL_TEXT_WIDTH_PERCENT};
+#[derive(Debug, Copy, Clone)]
 pub struct KeyDown {
     pub code: KeyCode,
     pub mods: KeyModifiers,
 }
+#[derive(Debug, Copy, Clone)]
 pub enum KeyCode {
     Char(char),
     Up,
@@ -12,10 +14,9 @@ pub enum KeyCode {
     Esc,
     Unimplemented,
 }
+#[derive(Debug, Copy, Clone)]
 pub enum KeyModifiers {
-    Shift,
     Ctrl,
-    Alt,
     Unimplemented,
 }
 

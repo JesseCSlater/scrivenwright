@@ -21,8 +21,8 @@ impl App {
             .get(self.sample_start_index + self.sample_len)
             .unwrap();
         let mut lines: Vec<String> = self.book_lines.clone();
-        let num_rows = frame.size().height as usize - 2;
-        let rows_to_center = num_rows / 2 - 2;
+        let num_rows = frame.size().height as usize - 2; //TODO fix crash
+        let rows_to_center = num_rows / 2 - 2; //TODO fix crash
 
         let first_row = usize::checked_sub(rows_to_center, self.display_line).unwrap_or(0);
 

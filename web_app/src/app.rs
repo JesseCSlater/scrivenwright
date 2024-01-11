@@ -1,10 +1,11 @@
-use crate::{console_log, TERMINAL, terminal::get_window_size};
+use crate::{TERMINAL, terminal::get_window_size};
 use js_sys::Function;
 use ratatui::prelude::*;
 use wasm_bindgen::prelude::Closure;
 use yew::prelude::*;
 use scrivenwright::app::{App, Test, KeyPress};
-
+use scrivenwright::handler::{KeyDown, KeyCode as K, KeyModifiers as M};
+use std::panic;
 
 pub struct TermApp {
     app : App
@@ -13,8 +14,30 @@ pub struct TermApp {
 #[derive(Debug)]
 pub enum TermAppMsg {
     Resized,
-    KeyDown(KeyboardEvent),
+    KeyDown(KeyDown),
 }
+
+fn to_key_down(event: KeyboardEvent) -> KeyDown {
+    let code = match event.key().as_str() {
+        "Escape" => K::Esc,
+        "Up" => K::Up,
+        "Down" => K::Down,
+        "Right" => K::Right,
+        "Left" => K::Left,
+        s => {
+            if s.len() == 1 {
+                K::Char(s.chars().next().unwrap())
+            }
+            else{K::Unimplemented}
+        }
+    };
+    let mods = if event.ctrl_key() {
+        M::Ctrl
+    } else { M::Unimplemented};
+
+    KeyDown { code, mods }
+}
+
 
 impl TermApp {
     fn draw(&self, _area: Rect, frame: &mut Frame<'_>) {
@@ -29,6 +52,12 @@ impl Component for TermApp {
     fn create(ctx: &Context<Self>) -> Self {
         let window = web_sys::window().unwrap();
 
+        let panic_hook = panic::take_hook();
+        panic::set_hook(Box::new(move |panic| {
+            _ = web_sys::window().unwrap().alert_with_message(format!("Panicked, please reload. Error: {}", panic.to_string()).as_str());
+            panic_hook(panic);
+        }));
+
         let cb = ctx.link().callback(|()| TermAppMsg::Resized);
         let func: Function = Closure::<dyn 'static + Fn()>::new(move || cb.emit(()))
             .into_js_value()
@@ -37,14 +66,14 @@ impl Component for TermApp {
 
         let cb: Callback<KeyboardEvent> = ctx
             .link()
-            .callback(|e: KeyboardEvent| TermAppMsg::KeyDown(e));
+            .callback(|e: KeyboardEvent| TermAppMsg::KeyDown(to_key_down(e)));
         let func: Function =
             Closure::<dyn 'static + Fn(KeyboardEvent)>::new(move |e: KeyboardEvent| cb.emit(e))
                 .into_js_value()
                 .into();
         window.set_onkeydown(Some(&func));
 
-        let book_text = "Text".into();
+        let book_text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras ultrices imperdiet augue et facilisis. Duis dignissim libero eros, eu sagittis purus suscipit at. Vivamus sit amet bibendum ex. Ut convallis velit id odio tincidunt fringilla. Mauris interdum eleifend sapien, vitae luctus sem. Sed suscipit ultrices metus, ut iaculis urna sagittis vel. Ut elementum nisi ac diam mattis, non condimentum urna pretium. Proin hendrerit metus sed pretium lacinia. Praesent a purus rhoncus odio imperdiet blandit quis quis risus. Aliquam euismod, eros at congue laoreet, sem mi pellentesque augue, et dictum magna augue eget lectus. Nam ultrices justo justo, quis gravida justo semper eget. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Nunc hendrerit massa sed fringilla laoreet. In id quam tincidunt sem laoreet aliquet molestie a lacus. Donec felis dui, tempus tincidunt laoreet ut, convallis quis mauris. ".into();
 
         let tests = Vec::new();
     
@@ -61,7 +90,7 @@ impl Component for TermApp {
         match msg {
             TermAppMsg::Resized => TERMINAL.term().backend_mut().resize_buffer(),
             TermAppMsg::KeyDown(event) => {
-                console_log(format!("{}, {}", event.key(), event.ctrl_key()))
+                self.app.handle_key_events(event).expect("Failed to handle char");
             }
         }
         true

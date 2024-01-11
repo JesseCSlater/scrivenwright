@@ -14,7 +14,6 @@
 )]
 
 use std::{
-    fmt::{Debug, Display},
     ops::{Deref, DerefMut},
     sync::{Mutex, MutexGuard, OnceLock},
 };
@@ -63,14 +62,6 @@ impl<'a> DerefMut for TermDeref<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
-}
-
-pub fn console_debug(s: impl Debug) {
-    web_sys::console::log_1(&format!("{s:?}").into())
-}
-
-pub fn console_log(s: impl Display) {
-    web_sys::console::log_1(&format!("{s}").into())
 }
 
 fn main() {

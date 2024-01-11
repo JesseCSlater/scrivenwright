@@ -66,12 +66,6 @@ impl App {
     }
 
     pub fn handle_char(&mut self, c: char) -> AppResult<()> {
-        let &(cur_line, _) = self
-            .line_index
-            .get(self.sample_start_index + self.cur_char)
-            .unwrap();
-        self.display_line = cur_line;
-
         let correct = c
             == self
                 .book_text
@@ -102,6 +96,12 @@ impl App {
             time: Utc::now(),
         };
         self.keypress_log.push(log_entry.clone());
+
+        let &(cur_line, _) = self
+            .line_index
+            .get(self.sample_start_index + self.cur_char)
+            .unwrap();
+        self.display_line = cur_line;
         Ok(())
     }
 

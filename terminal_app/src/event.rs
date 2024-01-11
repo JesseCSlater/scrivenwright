@@ -1,13 +1,31 @@
-use crossterm::event::{self, Event as CrosstermEvent, KeyEvent};
+use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, KeyCode as CK, KeyModifiers as CM};
 use scrivenwright::app::AppResult;
+use scrivenwright::handler::{KeyDown, KeyCode as K, KeyModifiers as M};
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Event {
-    Key(KeyEvent),
+    Key(KeyDown),
     Resize(u16, u16),
+}
+
+fn to_key_down(event: KeyEvent) -> KeyDown {
+    let code = match event.code {
+        CK::Char(c) => K::Char(c),
+        CK::Esc => K::Esc,
+        CK::Up => K::Up,
+        CK::Down => K::Down,
+        CK::Right => K::Right,
+        CK::Left => K::Left,
+        _ => K::Unimplemented,
+    };
+    let mods = match event.modifiers {
+        CM::CONTROL => M::Ctrl,
+        _ => M::Unimplemented,
+    };
+    KeyDown { code, mods }
 }
 
 #[allow(dead_code)]
@@ -33,7 +51,7 @@ impl EventHandler {
 
                     if event::poll(timeout).expect("no events available") {
                         match event::read().expect("unable to read event") {
-                            CrosstermEvent::Key(e) => sender.send(Event::Key(e)),
+                            CrosstermEvent::Key(e) => sender.send(Event::Key(to_key_down(e))),
                             CrosstermEvent::Resize(w, h) => sender.send(Event::Resize(w, h)),
                             _ => Ok(()),
                         }
