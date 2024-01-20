@@ -14,7 +14,7 @@ impl App {
         let &(start_line, start_offset) = self.line_index.get(self.sample_start_index).unwrap();
         let &(cur_line, cur_offset) = self
             .line_index
-            .get(self.sample_start_index + self.cur_char)
+            .get(self.sample_start_index + self.text.cur_char)
             .unwrap();
         let &(end_line, end_offset) = self
             .line_index

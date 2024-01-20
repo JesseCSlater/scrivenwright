@@ -2,7 +2,7 @@ use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
-use scrivenwright::app::{App, AppResult, KeyPress, Test};
+use scrivenwright::app::{App, AppResult, KeyPress, Test, Text};
 use std::panic;
 use std::{env, fs, io};
 
@@ -49,7 +49,8 @@ fn main() -> AppResult<()> {
         Ok(())
     };
 
-    let mut app = App::new(terminal.size()?.width, book_text, tests, save)?;
+    let text = Text::new(book_text, tests, save, 0);
+    let mut app = App::new(terminal.size()?.width, text);
 
     let events = EventHandler::new(250);
 
@@ -77,5 +78,3 @@ fn main() -> AppResult<()> {
     terminal.show_cursor()?;
     Ok(())
 }
-
-

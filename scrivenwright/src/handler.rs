@@ -51,7 +51,7 @@ impl App {
             (_, C::Esc) => {
                 let &(cur_line, _) = self
                     .line_index
-                    .get(self.sample_start_index + self.cur_char)
+                    .get(self.sample_start_index + self.text.cur_char)
                     .unwrap();
                 self.display_line = cur_line
             }
