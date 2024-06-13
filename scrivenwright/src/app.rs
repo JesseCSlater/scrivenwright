@@ -12,32 +12,59 @@ pub struct App {
     pub running: bool,
     pub book_lines: Vec<String>,
     pub line_index: Vec<(usize, usize)>,
-    pub sample_start_index: usize,
-    pub sample_len: usize,
     start_time: DateTime<Utc>,
-    pub display_line: usize,
-    pub text_width_percent: u16,
     pub terminal_width: u16,
-    pub full_text_width: bool,
+    pub settings: Settings,
     pub text: Text,
+}
+
+pub struct Settings {
+    pub text_width_percent: u16,
+    pub full_text_width: bool,
+}
+
+impl Settings {
+    pub fn new() -> Self {
+        Self {
+            text_width_percent: DEFAULT_TEXT_WIDTH_PERCENT,
+            full_text_width: false,
+        }
+    }
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 pub struct Text {
     pub text: String,
     pub cur_char: usize,
+    pub sample_start_index: usize,
+    pub sample_len: usize,
     sample_log: Vec<Test>,
     keypress_log: Vec<KeyPress>,
     save: Box<dyn Fn(Vec<Test>, Vec<KeyPress>) -> AppResult<()>>,
 }
 
 impl Text {
-    pub fn new<F>(text: String, sample_log: Vec<Test>, save: F, cur_char: usize) -> Self
+    pub fn new<F>(
+        text: String,
+        sample_log: Vec<Test>,
+        save: F,
+        cur_char: usize,
+        sample_start_index: usize,
+        sample_len: usize,
+    ) -> Self
     where
         F: Fn(Vec<Test>, Vec<KeyPress>) -> AppResult<()> + 'static,
     {
         Self {
             text,
             cur_char,
+            sample_start_index,
+            sample_len,
             sample_log,
             save: Box::new(save),
             keypress_log: Default::default(),
@@ -49,16 +76,12 @@ impl App {
     pub fn new(terminal_width: u16, text: Text) -> Self {
         let mut ret = Self {
             text,
+            settings: Settings::default(),
             terminal_width,
             running: true,
-            text_width_percent: DEFAULT_TEXT_WIDTH_PERCENT,
-            full_text_width: false,
             start_time: Default::default(),
-            sample_len: Default::default(),
-            sample_start_index: Default::default(),
             book_lines: Default::default(),
             line_index: Default::default(),
-            display_line: Default::default(),
         };
 
         let _ = ret.get_next_sample();
@@ -78,17 +101,17 @@ impl App {
                 .text
                 .text
                 .chars()
-                .nth(self.sample_start_index + self.text.cur_char)
+                .nth(self.text.sample_start_index + self.text.cur_char)
                 .unwrap();
 
         if correct {
             self.text.cur_char += 1
         }
-        if !correct || self.text.cur_char == self.sample_len {
+        if !correct || self.text.cur_char == self.text.sample_len {
             self.text.sample_log.push(Test {
                 succeeded: correct,
-                start_index: self.sample_start_index,
-                end_index: self.sample_start_index + self.text.cur_char,
+                start_index: self.text.sample_start_index,
+                end_index: self.text.sample_start_index + self.text.cur_char,
                 started: self.start_time,
                 completed: Utc::now(),
             });
@@ -107,15 +130,15 @@ impl App {
 
         let &(cur_line, _) = self
             .line_index
-            .get(self.sample_start_index + self.text.cur_char)
+            .get(self.text.sample_start_index + self.text.cur_char)
             .unwrap();
-        self.display_line = cur_line;
         Ok(())
     }
 
     pub fn generate_lines(&mut self) {
-        let max_line_len =
-            (self.terminal_width as f64 * (self.text_width_percent as f64 / 100.0)) as usize;
+        let max_line_len = (self.terminal_width as f64
+            * (self.settings.text_width_percent as f64 / 100.0))
+            as usize;
         let mut lines = Vec::new();
         let mut line_index: Vec<(usize, usize)> = Vec::new();
         let mut line = "".to_owned();
@@ -155,7 +178,6 @@ impl App {
         }
 
         self.book_lines = lines;
-        self.display_line = line_index.get(self.sample_start_index).unwrap().0; //TODO allow for resize while scrolled
         self.line_index = line_index;
     }
 
@@ -212,8 +234,8 @@ impl App {
             .len()
             + 1;
 
-        self.sample_start_index = usize::min(start_index, self.text.text.len() - 1);
-        self.sample_len = usize::min(len, self.text.text.len() - start_index - 1);
+        self.text.sample_start_index = usize::min(start_index, self.text.text.len() - 1);
+        self.text.sample_len = usize::min(len, self.text.text.len() - start_index - 1);
         self.start_time = Utc::now();
         Ok(())
     }

@@ -49,7 +49,8 @@ fn main() -> AppResult<()> {
         Ok(())
     };
 
-    let text = Text::new(book_text, tests, save, 0);
+    let text = Text::new(book_text, tests, save, 0, 0, 10); //TODO sample length generation should
+                                                            //be based only on the settings, the text, and the sample history
     let mut app = App::new(terminal.size()?.width, text);
 
     let events = EventHandler::new(250);

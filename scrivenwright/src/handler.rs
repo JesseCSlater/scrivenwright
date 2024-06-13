@@ -20,6 +20,7 @@ pub enum KeyModifiers {
     Unimplemented,
 }
 
+//TODO extract behavior into functions so this is just a key map.
 impl App {
     pub fn handle_key_events(&mut self, key_press: KeyDown) -> AppResult<()> {
         use KeyCode as C;
@@ -27,8 +28,8 @@ impl App {
         match (key_press.mods, key_press.code) {
             (M::Ctrl, C::Char('c')) => self.quit()?,
             (M::Ctrl, C::Char('f')) => {
-                self.full_text_width = !self.full_text_width;
-                self.text_width_percent = if self.full_text_width {
+                self.settings.full_text_width = !self.settings.full_text_width;
+                self.settings.text_width_percent = if self.settings.full_text_width {
                     FULL_TEXT_WIDTH_PERCENT
                 } else {
                     DEFAULT_TEXT_WIDTH_PERCENT
@@ -37,23 +38,23 @@ impl App {
             }
             (_, C::Char(c)) => self.handle_char(c)?,
             (M::Ctrl, C::Up) => {
-                self.display_line = self.display_line.checked_sub(10).unwrap_or_default();
+                //self.display_line = self.display_line.checked_sub(10).unwrap_or_default();
             }
             (M::Ctrl, C::Down) => {
-                self.display_line += 10;
+                //self.display_line += 10;
             }
             (_, C::Up) => {
-                self.display_line = self.display_line.checked_sub(1).unwrap_or_default();
+                //self.display_line = self.display_line.checked_sub(1).unwrap_or_default();
             }
             (_, C::Down) => {
-                self.display_line += 1;
+                //self.display_line += 1;
             }
             (_, C::Esc) => {
                 let &(cur_line, _) = self
                     .line_index
-                    .get(self.sample_start_index + self.text.cur_char)
+                    .get(self.text.sample_start_index + self.text.cur_char)
                     .unwrap();
-                self.display_line = cur_line
+                //self.display_line = cur_line
             }
             _ => {}
         }
