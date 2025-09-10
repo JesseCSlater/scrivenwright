@@ -1,21 +1,68 @@
 use chrono::{serde::ts_microseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::error;
+use textwrap::{Options};
 
 pub const DEFAULT_TEXT_WIDTH_PERCENT: u16 = 60;
-pub const FULL_TEXT_WIDTH_PERCENT: u16 = 95;
+pub const FULL_TEXT_WIDTH_PERCENT: u16 = 96;
 const STARTING_SAMPLE_SIZE: usize = 100;
 
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
-pub struct App {
+pub struct App<'a> {
     pub running: bool,
-    pub book_lines: Vec<String>,
-    pub line_index: Vec<(usize, usize)>,
-    start_time: DateTime<Utc>,
     pub terminal_width: u16,
+    start_time: DateTime<Utc>,
+
     pub settings: Settings,
-    pub text: Text,
+    pub text: Text<'a>,
+    pub ui_state: UIState<'a>,
+}
+
+pub struct UIState<'a> {
+    pub lines: Vec<(usize, &'a str)>,
+    pub cursor_pos: usize,
+}
+
+impl<'a> UIState<'a> {
+    pub fn new(text: &'a str, line_width: u16, cursor_pos: usize) -> Self {
+        Self {
+            lines: Self::wrap(text, line_width),
+            cursor_pos,
+        }
+    }
+
+    pub fn wrap(text: &'a str, line_width: u16) -> Vec<(usize, &'a str)> {
+        let options: Options = Options::new(line_width as usize)
+            .break_words(false)
+            .word_splitter(textwrap::WordSplitter::NoHyphenation)
+            .preserve_trailing_space(true);
+        let wrapped_lines: Vec<Cow<'a, str>> = textwrap::wrap(text, &options);
+
+        let mut lines = Vec::new();
+        let mut prefix_sum: usize = 0;
+        for cow in wrapped_lines {
+            let line = match cow {
+                Cow::Borrowed(s) => s,
+                Cow::Owned(_) => panic! {"Jesse has misunderstood the textwrap library."},
+            };
+            lines.push((prefix_sum, line));
+            prefix_sum += line.len();
+        }
+        lines
+    }
+
+    pub fn line_offset_of_idx(&self, idx: usize) -> (usize, usize) {
+        let res = self
+            .lines
+            .binary_search_by_key(&idx, |(start_idx, _)| *start_idx);
+        let line = match res {
+            Ok(l) => l,
+            Err(l) => l - 1,
+        };
+        (line, idx - self.lines[line].0)
+    }
 }
 
 pub struct Settings {
@@ -30,6 +77,10 @@ impl Settings {
             full_text_width: false,
         }
     }
+
+    pub fn line_width(&self, terminal_width: u16) -> u16 {
+        terminal_width * self.text_width_percent / 100
+    }
 }
 
 impl Default for Settings {
@@ -38,8 +89,8 @@ impl Default for Settings {
     }
 }
 
-pub struct Text {
-    pub text: String,
+pub struct Text<'a> {
+    pub text: &'a str,
     pub cur_char: usize,
     pub sample_start_index: usize,
     pub sample_len: usize,
@@ -48,9 +99,9 @@ pub struct Text {
     save: Box<dyn Fn(Vec<Test>, Vec<KeyPress>) -> AppResult<()>>,
 }
 
-impl Text {
+impl<'a> Text<'a> {
     pub fn new<F>(
-        text: String,
+        text: &'a str,
         sample_log: Vec<Test>,
         save: F,
         cur_char: usize,
@@ -72,22 +123,34 @@ impl Text {
     }
 }
 
-impl App {
-    pub fn new(terminal_width: u16, text: Text) -> Self {
+impl<'a> App<'a> {
+    pub fn new(terminal_width: u16, text: Text<'a>) -> Self {
+        let settings = Settings::default();
+
         let mut ret = Self {
+            ui_state: UIState::new(
+                &text.text,
+                settings.line_width(terminal_width),
+                text.cur_char,
+            ),
             text,
-            settings: Settings::default(),
+            settings,
             terminal_width,
             running: true,
             start_time: Default::default(),
-            book_lines: Default::default(),
-            line_index: Default::default(),
         };
 
         let _ = ret.get_next_sample();
-        ret.generate_lines();
 
         ret
+    }
+
+    pub fn line_width(&self) -> u16 {
+        self.settings.line_width(self.terminal_width)
+    }
+
+    pub fn rewrap(&mut self) {
+        self.ui_state.lines = UIState::wrap(self.text.text, self.line_width())
     }
 
     pub fn quit(&mut self) -> AppResult<()> {
@@ -128,57 +191,7 @@ impl App {
         };
         self.text.keypress_log.push(log_entry.clone());
 
-        let &(cur_line, _) = self
-            .line_index
-            .get(self.text.sample_start_index + self.text.cur_char)
-            .unwrap();
         Ok(())
-    }
-
-    pub fn generate_lines(&mut self) {
-        let max_line_len = (self.terminal_width as f64
-            * (self.settings.text_width_percent as f64 / 100.0))
-            as usize;
-        let mut lines = Vec::new();
-        let mut line_index: Vec<(usize, usize)> = Vec::new();
-        let mut line = "".to_owned();
-        let mut word = "".to_owned();
-        let mut row_i = 0;
-        let mut column_i = 0;
-
-        for c in self.text.text.chars() {
-            word.push(c);
-            if c == ' ' {
-                if line.len() + word.len() < max_line_len {
-                    line.push_str(&word);
-                } else {
-                    lines.push(line);
-                    line = word.to_owned();
-                    row_i += 1;
-                    column_i = 0;
-                }
-                for _ in 0..word.len() {
-                    line_index.push((row_i, column_i));
-                    column_i += 1;
-                }
-                word = "".to_owned();
-            }
-        }
-        if line.len() + word.len() < max_line_len {
-            line.push_str(&word);
-            lines.push(line);
-        } else {
-            lines.push(line);
-            lines.push(word.clone());
-            row_i += 1;
-        }
-        for _ in 0..word.len() {
-            line_index.push((row_i, column_i));
-            column_i += 1;
-        }
-
-        self.book_lines = lines;
-        self.line_index = line_index;
     }
 
     fn get_next_sample(&mut self) -> AppResult<()> {

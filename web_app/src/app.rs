@@ -9,7 +9,7 @@ use wasm_bindgen::prelude::Closure;
 use yew::prelude::*;
 
 pub struct TermApp {
-    app: App,
+    app: App<'static>,
 }
 
 #[derive(Debug)]
@@ -84,15 +84,19 @@ impl Component for TermApp {
 
         let save = move |_tests: Vec<Test>, _keypresses: Vec<KeyPress>| Ok(());
 
-        let text = Text::new(book_text, tests, save, 0);
-        let app = App::new(get_window_size().1, text);
+        let text = Text::new(book_text, tests, save, 0, 0, 100);
+        let app = App::new(get_window_size().0, text);
 
         Self { app }
     }
 
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            TermAppMsg::Resized => TERMINAL.term().backend_mut().resize_buffer(),
+            TermAppMsg::Resized => {
+                TERMINAL.term().backend_mut().resize_buffer();
+                self.app.terminal_width = get_window_size().0;
+                self.app.rewrap();
+            },
             TermAppMsg::KeyDown(event) => {
                 self.app
                     .handle_key_events(event)

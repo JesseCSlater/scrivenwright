@@ -1,4 +1,9 @@
-<!DOCTYPE html><html lang="en"><head> <meta charset="UTF-8"><link href="https://fonts.googleapis.com/css?family=Roboto Mono" rel="stylesheet"><style>
+<!DOCTYPE html>
+<html lang="en">
+<head> <link rel="modulepreload" href="/scrivenwright-web-56aba250b8935227.js" crossorigin="anonymous" integrity="sha384-Tg/d6KTqj/UObUp3+JaiAIQBWGLRfPkoB/HYlZSRVJqTTphMl4jDwr8U7ypLwm0f"><link rel="preload" href="/scrivenwright-web-56aba250b8935227_bg.wasm" crossorigin="anonymous" integrity="sha384-mR1ly9pznckx85z8I78BaULsurhf8dhe60mMat61AOlESiE5p2b+7s41NnhS7www" as="fetch" type="application/wasm"></head>
+<meta charset="UTF-8">
+<link href='https://fonts.googleapis.com/css?family=Roboto Mono' rel='stylesheet'>
+<style>
 	body {
 		font-family: 'Source Code Pro', monospace;
 		font-size: 32px;
@@ -19,26 +24,23 @@
 		padding: 0;
 	}
 </style>
-<link rel="preload" href="/scrivenwright-web-933f75a092913e516b13e1123c9ee7aa8481bb14a16aaf8c4f53b59a97b888ee31737722c60f2bf470800a8b9053f238_bg.wasm" as="fetch" type="application/wasm" crossorigin="anonymous" integrity="sha384-kz91oJKRPlFrE-ESPJ7nqoSBuxShaq-MT1O1mpe4iO4xc3cixg8r9HCACouQU_I4">
-<link rel="modulepreload" href="/scrivenwright-web-933f75a092913e516b13e1123c9ee7aa8481bb14a16aaf8c4f53b59a97b888ee31737722c60f2bf470800a8b9053f238.js" crossorigin="anonymous" integrity="sha384-eUC6PE6VP_KdGZ6dD66RzyaVNAg4CdiE7jukFohKt6TdaSj0HCpC301jfPYIAWXT"></head>
-
-
-
 <body> 
-<script> </script>
-
-
-
 <script type="module">
-import init, * as bindings from '/scrivenwright-web-933f75a092913e516b13e1123c9ee7aa8481bb14a16aaf8c4f53b59a97b888ee31737722c60f2bf470800a8b9053f238.js';
-init('/scrivenwright-web-933f75a092913e516b13e1123c9ee7aa8481bb14a16aaf8c4f53b59a97b888ee31737722c60f2bf470800a8b9053f238_bg.wasm');
+import init, * as bindings from '/scrivenwright-web-56aba250b8935227.js';
+const wasm = await init({ module_or_path: '/scrivenwright-web-56aba250b8935227_bg.wasm' });
+
+
 window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script><script>"use strict";
 
 (function () {
 
     const address = '{{__TRUNK_ADDRESS__}}';
+    const base = '{{__TRUNK_WS_BASE__}}';
     let protocol = '';
     protocol =
         protocol
@@ -46,7 +48,7 @@ window.wasmBindings = bindings;
             : window.location.protocol === 'https:'
                 ? 'wss'
                 : 'ws';
-    const url = protocol + '://' + address + '/_trunk/ws';
+    const url = protocol + '://' + address + base + '.well-known/trunk/ws';
 
     class Overlay {
         constructor() {
@@ -125,7 +127,7 @@ window.wasmBindings = bindings;
                         break;
                 }
             };
-            ws.onclose = this.onclose;
+            ws.onclose = () => this.onclose();
         }
 
         onclose() {
@@ -137,7 +139,7 @@ window.wasmBindings = bindings;
                     // rebuilt on restart)
                     const ws = new WebSocket(this.url);
                     ws.onopen = () => window.location.reload();
-                    ws.onclose = this.onclose;
+                    ws.onclose = () => this.onclose();
                 },
                 this.poll_interval);
         }
@@ -162,4 +164,7 @@ window.wasmBindings = bindings;
     new Client(url).start();
 
 })()
-</script></body></html>
+</script></body>
+<script> </script>
+</html>
+

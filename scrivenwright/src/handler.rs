@@ -1,9 +1,11 @@
 use crate::app::{App, AppResult, DEFAULT_TEXT_WIDTH_PERCENT, FULL_TEXT_WIDTH_PERCENT};
+
 #[derive(Debug, Copy, Clone)]
 pub struct KeyDown {
     pub code: KeyCode,
     pub mods: KeyModifiers,
 }
+
 #[derive(Debug, Copy, Clone)]
 pub enum KeyCode {
     Char(char),
@@ -14,6 +16,7 @@ pub enum KeyCode {
     Esc,
     Unimplemented,
 }
+
 #[derive(Debug, Copy, Clone)]
 pub enum KeyModifiers {
     Ctrl,
@@ -21,7 +24,7 @@ pub enum KeyModifiers {
 }
 
 //TODO extract behavior into functions so this is just a key map.
-impl App {
+impl<'a> App<'a> {
     pub fn handle_key_events(&mut self, key_press: KeyDown) -> AppResult<()> {
         use KeyCode as C;
         use KeyModifiers as M;
@@ -34,7 +37,7 @@ impl App {
                 } else {
                     DEFAULT_TEXT_WIDTH_PERCENT
                 };
-                self.generate_lines()
+                self.rewrap(); 
             }
             (_, C::Char(c)) => self.handle_char(c)?,
             (M::Ctrl, C::Up) => {
@@ -50,10 +53,7 @@ impl App {
                 //self.display_line += 1;
             }
             (_, C::Esc) => {
-                let &(cur_line, _) = self
-                    .line_index
-                    .get(self.text.sample_start_index + self.text.cur_char)
-                    .unwrap();
+
                 //self.display_line = cur_line
             }
             _ => {}

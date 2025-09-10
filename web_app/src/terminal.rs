@@ -113,23 +113,22 @@ impl Backend for WebTerm {
 
 pub fn get_window_size() -> (u16, u16) {
     let (w, h) = get_raw_window_size();
-    ((w / 20) as u16, (h / 44) as u16)
+    ((w / 20), (h / 44))
 }
 
-fn get_raw_window_size() -> (usize, usize) {
+fn get_raw_window_size() -> (u16, u16) {
     fn js_val_to_int<I: TryFrom<usize>>(val: JsValue) -> Option<I> {
         val.as_f64().and_then(|i| I::try_from(i as usize).ok())
     }
 
     web_sys::window()
         .and_then(|s| {
-            Option::zip(
-                s.inner_width().ok().and_then(js_val_to_int::<usize>),
-                s.inner_height().ok().and_then(js_val_to_int::<usize>),
-            )
+            s.inner_width()
+                .ok()
+                .and_then(js_val_to_int::<u16>)
+                .zip(s.inner_height().ok().and_then(js_val_to_int::<u16>))
         })
-        .unwrap_or((120, 120))
-}
+        .unwrap_or((120, 120))}
 
 fn to_css_color(c: Color) -> Option<Cow<'static, str>> {
     match c {
