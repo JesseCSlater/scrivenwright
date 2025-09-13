@@ -39,11 +39,11 @@ impl<'a> App<'a> {
                 };
                 self.rewrap(); 
             }
-            (_, C::Char(c)) => self.handle_char(c)?,
+            (_, C::Char(c)) => self.handle_char(c),
             (M::Ctrl, C::Up) => {
                 //self.display_line = self.display_line.checked_sub(10).unwrap_or_default();
             }
-            (M::Ctrl, C::Down) => {
+            (M::Ctrl, C::Down) => { 
                 //self.display_line += 10;
             }
             (_, C::Up) => {

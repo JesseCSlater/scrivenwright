@@ -8,115 +8,41 @@ use ratatui::{
 use ratatui::{prelude::*, widgets::*};
 use std::cmp;
 
-//TODO fix panic on end of short input
 impl<'a> App<'a> {
     pub fn render(&self, frame: &mut Frame) {
         let state = &self.ui_state;
-        let (start_line, start_offset) = state.line_offset_of_idx(self.text.sample_start_index);
-        let (cur_line, cur_offset) =
-            state.line_offset_of_idx(self.text.sample_start_index + self.text.cur_char);
-        let (end_line, end_offset) =
-            state.line_offset_of_idx(self.text.sample_start_index + self.text.sample_len);
-
-        let num_rows = frame.size().height as usize - 2; //TODO fix crash
-        let rows_to_center = num_rows / 2 - 2; //TODO fix crash
-
-        let first_line = usize::checked_sub(cur_line, rows_to_center).unwrap_or(0);
-        let first_row = usize::checked_sub(rows_to_center, cur_line).unwrap_or(0);
+        let cur_line =
+            state.line_of_idx(state.cursor_line);
         
+        let num_rows = (frame.size().height as usize).saturating_sub(2);
+        let rows_to_center = (num_rows / 2).saturating_sub(2);
+        let first_line = cur_line.saturating_sub(rows_to_center);
+        let first_row = rows_to_center.saturating_sub(cur_line);
+
+        let sidx = self.text.sample_start_index;
+        let cidx = sidx + self.text.cur_char;
+        let eidx = sidx + self.text.sample_len;
+        let style = |idx: usize, c: char| -> Span {
+            let s = c.to_string(); 
+            if idx < sidx || idx >= eidx {
+                s.dim()
+            } else if idx < cidx {
+                s.white()
+            } else if idx == cidx {
+                s.black().bg(Color::White)
+            } else {
+                s.blue()
+            }
+        };
 
         let mut display_lines: Vec<Line> = Vec::new();
         for i in first_line..cmp::min(first_line + num_rows, state.lines.len()){
-            let s = state.lines[i].1;
-            if i == cur_line {
-                if i == start_line && i == end_line {
-                    display_lines.push(Line::from(vec![
-                        s.chars().take(start_offset).collect::<String>().dim(),
-                        s.chars()
-                            .take(cur_offset)
-                            .skip(start_offset)
-                            .collect::<String>()
-                            .white(),
-                        s.chars()
-                            .nth(cur_offset)
-                            .unwrap()
-                            .to_string()
-                            .black()
-                            .bg(Color::White),
-                        s.chars()
-                            .take(end_offset)
-                            .skip(cur_offset + 1)
-                            .collect::<String>()
-                            .blue(),
-                        s.chars().skip(end_offset).collect::<String>().dim(),
-                    ]));
-                } else if i == start_line {
-                    display_lines.push(Line::from(vec![
-                        s.chars().take(start_offset).collect::<String>().dim(),
-                        s.chars()
-                            .take(cur_offset)
-                            .skip(start_offset)
-                            .collect::<String>()
-                            .white(),
-                        s.chars()
-                            .nth(cur_offset)
-                            .unwrap()
-                            .to_string()
-                            .black()
-                            .bg(Color::White),
-                        s.chars().skip(cur_offset + 1).collect::<String>().blue(),
-                    ]));
-                } else if i == end_line {
-                    display_lines.push(Line::from(vec![
-                        s.chars().take(cur_offset).collect::<String>().white(),
-                        s.chars()
-                            .nth(cur_offset)
-                            .unwrap()
-                            .to_string()
-                            .black()
-                            .bg(Color::White),
-                        s.chars()
-                            .take(end_offset)
-                            .skip(cur_offset + 1)
-                            .collect::<String>()
-                            .blue(),
-                        s.chars().skip(end_offset).collect::<String>().dim(),
-                    ]));
-                } else {
-                    display_lines.push(Line::from(vec![
-                        s.chars().take(cur_offset).collect::<String>().white(),
-                        s.chars()
-                            .nth(cur_offset)
-                            .unwrap()
-                            .to_string()
-                            .black()
-                            .bg(Color::White),
-                        s.chars().skip(cur_offset + 1).collect::<String>().blue(),
-                    ]));
-                }
-            } else if i < cur_line {
-                if i == start_line {
-                    display_lines.push(Line::from(vec![
-                        s.chars().take(start_offset).collect::<String>().dim(),
-                        s.chars().skip(start_offset).collect::<String>().white(),
-                    ]));
-                } else if i < start_line {
-                    display_lines.push(s.dim().into());
-                } else {
-                    display_lines.push(s.white().into());
-                }
-            } else {
-                if i == end_line {
-                    display_lines.push(Line::from(vec![
-                        s.chars().take(end_offset).collect::<String>().blue(),
-                        s.chars().skip(end_offset).collect::<String>().dim(),
-                    ]));
-                } else if i < end_line {
-                    display_lines.push(s.blue().into());
-                } else {
-                    display_lines.push(s.dim().into());
-                }
-            }
+            let t = state.lines[i].1
+                .chars()
+                .enumerate()
+                .map(|(idx, c)| style(state.lines[i].0 + idx, c))
+                .collect::<Vec<_>>();
+            display_lines.push(Line::from(t));
         }
 
         let graph = Paragraph::new::<Text>(display_lines.into()).style(Style::default());
@@ -145,7 +71,7 @@ impl<'a> App<'a> {
             Block::default()
                 .title("Scrivenwright")
                 .title(
-                    block::Title::from(format!("{}", self.get_rolling_average().unwrap()))
+                    block::Title::from(format!("{}", self.get_rolling_average()))
                         .alignment(Alignment::Right),
                 )
                 .borders(Borders::ALL)

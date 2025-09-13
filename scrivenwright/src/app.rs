@@ -22,14 +22,14 @@ pub struct App<'a> {
 
 pub struct UIState<'a> {
     pub lines: Vec<(usize, &'a str)>,
-    pub cursor_pos: usize,
+    pub cursor_line: usize,
 }
 
 impl<'a> UIState<'a> {
-    pub fn new(text: &'a str, line_width: u16, cursor_pos: usize) -> Self {
+    pub fn new(text: &'a str, line_width: u16, cur_char: usize) -> Self {
         Self {
             lines: Self::wrap(text, line_width),
-            cursor_pos,
+            cursor_line,
         }
     }
 
@@ -53,15 +53,14 @@ impl<'a> UIState<'a> {
         lines
     }
 
-    pub fn line_offset_of_idx(&self, idx: usize) -> (usize, usize) {
+    pub fn line_of_idx(&self, idx: usize) -> usize {
         let res = self
             .lines
             .binary_search_by_key(&idx, |(start_idx, _)| *start_idx);
-        let line = match res {
+        match res {
             Ok(l) => l,
             Err(l) => l - 1,
-        };
-        (line, idx - self.lines[line].0)
+        }
     }
 }
 
@@ -79,7 +78,7 @@ impl Settings {
     }
 
     pub fn line_width(&self, terminal_width: u16) -> u16 {
-        terminal_width * self.text_width_percent / 100
+        ((terminal_width as usize) * (self.text_width_percent as usize) / 100) as u16
     }
 }
 
@@ -131,7 +130,7 @@ impl<'a> App<'a> {
             ui_state: UIState::new(
                 &text.text,
                 settings.line_width(terminal_width),
-                text.cur_char,
+                
             ),
             text,
             settings,
@@ -153,12 +152,16 @@ impl<'a> App<'a> {
         self.ui_state.lines = UIState::wrap(self.text.text, self.line_width())
     }
 
+    pub fn snap_to_cursor(&mut self) {
+        self.ui_state.cursor_line = self.ui_state.line_of_idx(self.text.sample_start_index + self.text.cur_char);
+    }
+
     pub fn quit(&mut self) -> AppResult<()> {
         self.running = false;
         (self.text.save)(self.text.sample_log.clone(), self.text.keypress_log.clone())
     }
 
-    pub fn handle_char(&mut self, c: char) -> AppResult<()> {
+    pub fn handle_char(&mut self, c: char) {
         let correct = c
             == self
                 .text
@@ -179,7 +182,7 @@ impl<'a> App<'a> {
                 completed: Utc::now(),
             });
             self.start_time = Utc::now();
-            self.get_next_sample()?;
+            self.get_next_sample();
 
             self.text.cur_char = 0;
         }
@@ -190,11 +193,10 @@ impl<'a> App<'a> {
             time: Utc::now(),
         };
         self.text.keypress_log.push(log_entry.clone());
-
-        Ok(())
+        self.snap_to_cursor();
     }
 
-    fn get_next_sample(&mut self) -> AppResult<()> {
+    fn get_next_sample(&mut self) {
         let tests = &self.text.sample_log;
 
         let mut start_index = 0;
@@ -250,11 +252,10 @@ impl<'a> App<'a> {
         self.text.sample_start_index = usize::min(start_index, self.text.text.len() - 1);
         self.text.sample_len = usize::min(len, self.text.text.len() - start_index - 1);
         self.start_time = Utc::now();
-        Ok(())
     }
 
-    pub fn get_rolling_average(&self) -> AppResult<usize> {
-        Ok(self
+    pub fn get_rolling_average(&self) -> usize {
+        self
             .text
             .sample_log
             .iter()
@@ -263,7 +264,7 @@ impl<'a> App<'a> {
             .rev()
             .take(10)
             .sum::<usize>()
-            / 10)
+            / 10
     }
 }
 
