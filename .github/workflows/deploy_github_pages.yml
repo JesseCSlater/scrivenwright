@@ -39,7 +39,7 @@ jobs:
       - name: Build the Rust WASM app and all of its assets
         run: |
           cd web_app
-          trunk build --public-url ${{ github.event.repository.name }}
+          trunk build --public-url /${{ github.event.repository.name }}/
           cd ..
 
       - name: Setup Pages
