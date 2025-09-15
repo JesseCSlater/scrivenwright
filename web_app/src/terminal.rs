@@ -128,7 +128,8 @@ fn get_raw_window_size() -> (u16, u16) {
                 .and_then(js_val_to_int::<u16>)
                 .zip(s.inner_height().ok().and_then(js_val_to_int::<u16>))
         })
-        .unwrap_or((120, 120))}
+        .unwrap_or((120, 120))
+}
 
 fn to_css_color(c: Color) -> Option<Cow<'static, str>> {
     match c {

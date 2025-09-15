@@ -1,6 +1,8 @@
-use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, KeyCode as CK, KeyModifiers as CM};
+use crossterm::event::{
+    self, Event as CrosstermEvent, KeyCode as CK, KeyEvent, KeyModifiers as CM,
+};
 use scrivenwright::app::AppResult;
-use scrivenwright::handler::{KeyDown, KeyCode as K, KeyModifiers as M};
+use scrivenwright::handler::{KeyCode as K, KeyDown, KeyModifiers as M};
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};

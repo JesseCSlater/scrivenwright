@@ -96,7 +96,7 @@ impl Component for TermApp {
                 TERMINAL.term().backend_mut().resize_buffer();
                 self.app.terminal_width = get_window_size().0;
                 self.app.rewrap();
-            },
+            }
             TermAppMsg::KeyDown(event) => {
                 self.app
                     .handle_key_events(event)

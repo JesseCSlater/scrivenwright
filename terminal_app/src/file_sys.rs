@@ -33,11 +33,7 @@ pub fn load_book(book_title: &str) -> AppResult<String> {
     Ok(deunicode(
         &Regex::new(r"\s+")
             .unwrap()
-            .replace_all(
-                &fs::read_to_string(book_file(book_title))?
-                .trim(),
-                " ",
-            )
+            .replace_all(&fs::read_to_string(book_file(book_title))?.trim(), " ")
             .to_string(),
     ))
 }
@@ -55,7 +51,10 @@ pub fn load_tests(book_title: &str) -> AppResult<Vec<Test>> {
 }
 
 pub fn save_tests(book_title: &str, tests: &Vec<Test>) -> AppResult<()> {
-    let mut test_log = fs::OpenOptions::new().create(true).write(true).open(test_dir(book_title))?;
+    let mut test_log = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(test_dir(book_title))?;
     let bytes = serde_json::to_vec(tests)?;
     test_log.write(&bytes)?;
     Ok(())
@@ -73,7 +72,10 @@ pub fn load_keypresses(book_title: &str) -> AppResult<Vec<KeyPress>> {
 }
 
 pub fn save_keypresses(book_title: &str, keypresses: &Vec<KeyPress>) -> AppResult<()> {
-    let mut key_press_log = fs::OpenOptions::new().create(true).write(true).open(keypress_dir(book_title))?;
+    let mut key_press_log = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(keypress_dir(book_title))?;
     let bytes = serde_json::to_vec(keypresses)?;
     key_press_log.write(&bytes)?;
     Ok(())
