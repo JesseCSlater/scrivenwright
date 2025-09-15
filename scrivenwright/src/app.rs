@@ -2,7 +2,7 @@ use chrono::{serde::ts_microseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::error;
-use textwrap::{Options};
+use textwrap::Options;
 
 pub const DEFAULT_TEXT_WIDTH_PERCENT: u16 = 60;
 pub const FULL_TEXT_WIDTH_PERCENT: u16 = 96;
@@ -27,10 +27,12 @@ pub struct UIState<'a> {
 
 impl<'a> UIState<'a> {
     pub fn new(text: &'a str, line_width: u16, cur_char: usize) -> Self {
-        Self {
+        let mut ret = Self {
             lines: Self::wrap(text, line_width),
-            cursor_line,
-        }
+            cursor_line: 0,
+        };
+        ret.cursor_line = ret.line_of_idx(cur_char);
+        ret
     }
 
     pub fn wrap(text: &'a str, line_width: u16) -> Vec<(usize, &'a str)> {
@@ -127,11 +129,7 @@ impl<'a> App<'a> {
         let settings = Settings::default();
 
         let mut ret = Self {
-            ui_state: UIState::new(
-                &text.text,
-                settings.line_width(terminal_width),
-                
-            ),
+            ui_state: UIState::new(&text.text, settings.line_width(terminal_width), 0),
             text,
             settings,
             terminal_width,
@@ -139,7 +137,8 @@ impl<'a> App<'a> {
             start_time: Default::default(),
         };
 
-        let _ = ret.get_next_sample();
+        ret.get_next_sample();
+        ret.snap_to_cursor();
 
         ret
     }
@@ -153,7 +152,9 @@ impl<'a> App<'a> {
     }
 
     pub fn snap_to_cursor(&mut self) {
-        self.ui_state.cursor_line = self.ui_state.line_of_idx(self.text.sample_start_index + self.text.cur_char);
+        self.ui_state.cursor_line = self
+            .ui_state
+            .line_of_idx(self.text.sample_start_index + self.text.cur_char);
     }
 
     pub fn quit(&mut self) -> AppResult<()> {
@@ -255,8 +256,7 @@ impl<'a> App<'a> {
     }
 
     pub fn get_rolling_average(&self) -> usize {
-        self
-            .text
+        self.text
             .sample_log
             .iter()
             .map(|t| t.end_index - t.start_index)

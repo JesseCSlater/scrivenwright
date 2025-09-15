@@ -11,9 +11,8 @@ use std::cmp;
 impl<'a> App<'a> {
     pub fn render(&self, frame: &mut Frame) {
         let state = &self.ui_state;
-        let cur_line =
-            state.line_of_idx(state.cursor_line);
-        
+        let cur_line = state.cursor_line;
+
         let num_rows = (frame.size().height as usize).saturating_sub(2);
         let rows_to_center = (num_rows / 2).saturating_sub(2);
         let first_line = cur_line.saturating_sub(rows_to_center);
@@ -22,8 +21,8 @@ impl<'a> App<'a> {
         let sidx = self.text.sample_start_index;
         let cidx = sidx + self.text.cur_char;
         let eidx = sidx + self.text.sample_len;
-        let style = |idx: usize, c: char| -> Span {
-            let s = c.to_string(); 
+        let style_char = |idx: usize, c: char| -> Span {
+            let s = c.to_string();
             if idx < sidx || idx >= eidx {
                 s.dim()
             } else if idx < cidx {
@@ -36,11 +35,12 @@ impl<'a> App<'a> {
         };
 
         let mut display_lines: Vec<Line> = Vec::new();
-        for i in first_line..cmp::min(first_line + num_rows, state.lines.len()){
-            let t = state.lines[i].1
+        for i in first_line..cmp::min(first_line + num_rows - first_row, state.lines.len()) {
+            let t = state.lines[i]
+                .1
                 .chars()
                 .enumerate()
-                .map(|(idx, c)| style(state.lines[i].0 + idx, c))
+                .map(|(idx, c)| style_char(state.lines[i].0 + idx, c))
                 .collect::<Vec<_>>();
             display_lines.push(Line::from(t));
         }
