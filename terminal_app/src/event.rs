@@ -21,6 +21,7 @@ fn to_key_down(event: KeyEvent) -> KeyDown {
         CK::Down => K::Down,
         CK::Right => K::Right,
         CK::Left => K::Left,
+        CK::Enter => K::Char('\n'),
         _ => K::Unimplemented,
     };
     let mods = match event.modifiers {
@@ -73,7 +74,7 @@ impl EventHandler {
         }
     }
 
-    pub fn next(&self) -> AppResult<Event> {
-        Ok(self.receiver.recv()?)
+    pub fn next(&self) -> Event {
+        self.receiver.recv().unwrap()
     }
 }

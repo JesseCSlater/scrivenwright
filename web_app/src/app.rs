@@ -1,15 +1,16 @@
-use crate::{terminal::get_window_size, TERMINAL};
+use crate::TERMINAL;
 use js_sys::Function;
-use ratatui::layout::Rect;
+//use ratatui::layout::Rect;
 use ratatui::Frame;
-use scrivenwright::app::{App, KeyPress, Test, Text};
+use scrivenwright::app::{App, KeyPress, OpenText, TestResult};
 use scrivenwright::handler::{KeyCode as K, KeyDown, KeyModifiers as M};
 use std::panic;
 use wasm_bindgen::prelude::Closure;
 use yew::prelude::*;
 
 pub struct TermApp {
-    app: App<'static>,
+    app: App<()>,
+    text: OpenText,
 }
 
 #[derive(Debug)]
@@ -21,10 +22,10 @@ pub enum TermAppMsg {
 fn to_key_down(event: KeyboardEvent) -> KeyDown {
     let code = match event.key().as_str() {
         "Escape" => K::Esc,
-        "Up" => K::Up,
-        "Down" => K::Down,
-        "Right" => K::Right,
-        "Left" => K::Left,
+        "ArrowUp" => K::Up,
+        "ArrowDown" => K::Down,
+        "ArrowRight" => K::Right,
+        "ArrowLeft" => K::Left,
         s => {
             if s.len() == 1 {
                 K::Char(s.chars().next().unwrap())
@@ -43,8 +44,8 @@ fn to_key_down(event: KeyboardEvent) -> KeyDown {
 }
 
 impl TermApp {
-    fn draw(&self, _area: Rect, frame: &mut Frame<'_>) {
-        self.app.render(frame)
+    fn draw(&self, frame: &mut Frame<'_>) {
+        self.app.render(&self.text, frame)
     }
 }
 
@@ -82,25 +83,25 @@ impl Component for TermApp {
 
         let tests = Vec::new();
 
-        let save = move |_tests: Vec<Test>, _keypresses: Vec<KeyPress>| Ok(());
+        let save = move |_tests: Vec<TestResult>, _keypresses: Vec<KeyPress>| ();
 
-        let text = Text::new(book_text, tests, save, 0, 0, 100);
-        let app = App::new(get_window_size().0, text);
+        let text = OpenText::new(book_text, tests, save);
+        let app = App::new(());
 
-        Self { app }
+        Self { app, text }
     }
 
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             TermAppMsg::Resized => {
                 TERMINAL.term().backend_mut().resize_buffer();
-                self.app.terminal_width = get_window_size().0;
-                self.app.rewrap();
             }
             TermAppMsg::KeyDown(event) => {
-                self.app
-                    .handle_key_events(event)
-                    .expect("Failed to handle char");
+                self.app.handle_key_events(
+                    event,
+                    &mut self.text,
+                    TERMINAL.term().size().unwrap().width - 2,
+                );
             }
         }
         true
@@ -108,9 +109,7 @@ impl Component for TermApp {
 
     fn view(&self, _ctx: &Context<Self>) -> Html {
         let mut term = TERMINAL.term();
-        let area = term.size().unwrap();
-        term.draw(|frame: &mut Frame<'_>| self.draw(area, frame))
-            .unwrap();
+        term.draw(|frame: &mut Frame<'_>| self.draw(frame)).unwrap();
         term.backend_mut().render()
     }
 }

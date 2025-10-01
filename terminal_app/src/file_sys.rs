@@ -1,6 +1,6 @@
 use deunicode::deunicode;
 use regex::Regex;
-use scrivenwright::app::{AppResult, KeyPress, Test};
+use scrivenwright::app::{AppResult, KeyPress, TestResult};
 use std::{fs, io::Read, io::Write, path::PathBuf};
 
 static SW_DIR: &str = "scrivenwright";
@@ -30,15 +30,24 @@ pub fn create_book_dir(book_title: &str) {
 }
 
 pub fn load_book(book_title: &str) -> AppResult<String> {
-    Ok(deunicode(
-        &Regex::new(r"\s+")
-            .unwrap()
-            .replace_all(&fs::read_to_string(book_file(book_title))?.trim(), " ")
-            .to_string(),
-    ))
+    let mut book: String = fs::read_to_string(book_file(book_title))?;
+
+    let rules: Vec<(Regex, &str)> = vec![
+        //Remove carriage returns
+        (Regex::new(r"\r").unwrap(), ""),
+        //Remove new lines within paragraphs
+        (Regex::new(r"([^\n])\n([^\n])").unwrap(), "$1 $2"),
+        //Remove duplicate spaces
+        (Regex::new(r"  ").unwrap(), " "),
+    ];
+
+    for (re, replacement) in rules {
+        book = re.replace_all(&book, replacement).into_owned();
+    }
+    Ok(book)
 }
 
-pub fn load_tests(book_title: &str) -> AppResult<Vec<Test>> {
+pub fn load_tests(book_title: &str) -> AppResult<Vec<TestResult>> {
     let mut test_log = fs::OpenOptions::new()
         .create(true)
         .read(true)
@@ -50,7 +59,7 @@ pub fn load_tests(book_title: &str) -> AppResult<Vec<Test>> {
     Ok(serde_json::from_str(&string).unwrap_or(Vec::new()))
 }
 
-pub fn save_tests(book_title: &str, tests: &Vec<Test>) -> AppResult<()> {
+pub fn save_tests(book_title: &str, tests: &Vec<TestResult>) -> AppResult<()> {
     let mut test_log = fs::OpenOptions::new()
         .create(true)
         .write(true)

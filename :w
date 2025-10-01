@@ -1,8 +1,6 @@
 use chrono::{serde::ts_microseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-use std::cell::RefCell;
-use std::cmp::min;
 use std::error;
 use textwrap::Options;
 
@@ -18,11 +16,11 @@ pub struct App<PA: PlatformAdapter> {
     pub settings: Settings,
 }
 
-pub struct OpenText {
-    text: String,
+pub struct OpenText<'a> {
+    text: &'a str,
     pub test: Test,
     pub focused_char: usize,
-    wrapper: RefCell<TextWrapper>,
+    pub wrapper: TextWrapper<'a>,
     test_log: Vec<TestResult>,
     keypress_log: Vec<KeyPress>,
     save: Box<dyn Fn(Vec<TestResult>, Vec<KeyPress>)>,
@@ -35,10 +33,10 @@ pub struct Test {
     start_time: DateTime<Utc>,
 }
 
-pub struct TextWrapper {
+pub struct TextWrapper<'a> {
+    text: &'a str,
     cur_width: u16,
-    // Beginning of line, length of line
-    _lines: Vec<(usize, usize)>,
+    lines: Vec<usize, &'a str>,
 }
 
 pub struct Settings {
@@ -46,15 +44,17 @@ pub struct Settings {
     pub full_text_width: bool,
 }
 
-impl TextWrapper {
-    fn new() -> Self {
+impl<'a> TextWrapper<'a> {
+    fn new(text: &'a str) -> Self {
         Self {
+            text,
             cur_width: 0,
-            _lines: Vec::new(),
+            lines: Vec::new(),
+            line_starts: Vec::new(),
         }
     }
 
-    fn wrap(&mut self, text: &str, line_width: u16) {
+    fn wrap(&mut self, line_width: u16) {
         if line_width == self.cur_width {
             return;
         };
@@ -64,52 +64,38 @@ impl TextWrapper {
             .break_words(false)
             .word_splitter(textwrap::WordSplitter::NoHyphenation)
             .preserve_trailing_space(true);
-        let mut wrapped_lines = Vec::new();
-        for line in text.split_inclusive('\n') {
-            textwrap::wrap_single_line(line, &options, &mut wrapped_lines);
-        }
+        let wrapped_lines: Vec<Cow<'a, str>> = textwrap::wrap(self.text, &options);
 
-        self._lines = wrapped_lines
-            .iter()
-            .map(|cow| match cow {
-                Cow::Borrowed(s) => {
-                    let base = text.as_ptr() as usize;
-                    let start = s.as_ptr() as usize - base;
-                    (start, s.len())
-                }
+        self.lines = Vec::new();
+        self.line_starts = Vec::new();
+        let mut prefix_sum: usize = 0;
+        for cow in wrapped_lines {
+            let line = match cow {
+                Cow::Borrowed(s) => s,
                 Cow::Owned(_) => panic! {"Jesse has misunderstood the textwrap library."},
-            })
-            .collect();
-    }
-
-    fn lines<'a>(
-        &mut self,
-        text: &'a str,
-        line_width: u16,
-        first: usize,
-        num: usize,
-    ) -> Vec<(usize, &'a str)> {
-        self.wrap(text, line_width);
-        let mut ret = Vec::new();
-        for i in first..min(self._lines.len() - 1, first + num) {
-            let sidx = self._lines[i].0;
-            let len = self._lines[i].1;
-            ret.push((sidx, &text[sidx..sidx + len]));
+            };
+            self.lines.push(line);
+            self.line_starts.push(prefix_sum);
+            prefix_sum += line.len();
         }
-        ret
     }
 
-    fn line_of_idx(&mut self, text: &str, idx: usize, line_width: u16) -> usize {
-        self.wrap(text, line_width);
-        match self._lines.binary_search_by_key(&idx, |(key, _)| *key) {
+    pub fn lines(&mut self, line_width: u16) -> &Vec<&'a str> {
+        self.wrap(line_width);
+        &self.lines
+    }
+
+    pub fn line_starts(&mut self, line_width: u16) -> &Vec<usize> {
+        self.wrap(line_width);
+        &self.line_starts
+    }
+
+    pub fn line_of_idx(&mut self, idx: usize, line_width: u16) -> usize {
+        self.wrap(line_width);
+        match self.line_starts.binary_search(&idx) {
             Ok(l) => l,
             Err(l) => l - 1,
         }
-    }
-
-    fn start_idx_of_line(&mut self, text: &str, line: usize, line_width: u16) -> Option<usize> {
-        self.wrap(text, line_width);
-        Some(self._lines.get(line)?.0)
     }
 }
 
@@ -133,23 +119,17 @@ impl Default for Settings {
 }
 
 pub trait PlatformAdapter {
-    fn get_texts(&self) -> Vec<TextHandle>;
+    fn get_texts(&self) -> Vec<TextHandle<'_>>;
 }
 
-impl PlatformAdapter for () {
-    fn get_texts(&self) -> Vec<TextHandle> {
-        Vec::new()
-    }
-}
-
-pub struct TextHandle {
-    pub name: String,
+pub struct TextHandle<'a> {
+    pub name: &'a str,
     pub length: usize,
     pub last_opened: DateTime<Utc>,
     open: Box<dyn FnOnce()>,
 }
 
-impl Drop for OpenText {
+impl<'a> Drop for OpenText<'a> {
     fn drop(&mut self) {
         (self.save)(self.test_log.clone(), self.keypress_log.clone());
     }
@@ -197,12 +177,13 @@ impl Test {
             .collect::<String>();
 
         let len = full
-            .chars()
+            .split_whitespace()
             .rev()
-            .skip(wrong_num * 5)
-            .skip_while(|c| !c.is_whitespace())
+            .skip(usize::max(wrong_num, 1))
             .collect::<Vec<_>>()
-            .len();
+            .join(" ")
+            .len()
+            + 1;
 
         Test {
             start_index: usize::min(start_index, text.len() - 1),
@@ -213,18 +194,19 @@ impl Test {
     }
 }
 
-impl OpenText {
-    pub fn new<Save>(text: String, test_log: Vec<TestResult>, save: Save) -> Self
+impl<'a> OpenText<'a> {
+    pub fn new<Save, Delete>(text: &'a str, sample_log: Vec<TestResult>, save: Save) -> Self
     where
         Save: Fn(Vec<TestResult>, Vec<KeyPress>) -> () + 'static,
+        Delete: Fn() -> () + 'static,
     {
-        let test = Test::next(&text, &test_log);
+        let test = Test::next(text, &sample_log);
         Self {
             text,
             focused_char: test.start_index,
             test,
-            wrapper: RefCell::new(TextWrapper::new()),
-            test_log,
+            wrapper: TextWrapper::new(text),
+            test_log: sample_log,
             save: Box::new(save),
             keypress_log: Default::default(),
         }
@@ -232,18 +214,6 @@ impl OpenText {
 
     pub fn snap_to_cursor(&mut self) {
         self.focused_char = self.test.start_index + self.test.cur_char;
-    }
-
-    pub fn scroll(&mut self, line_width: u16, distance: isize) {
-        let cur_line = self.line_of_idx(self.focused_char, line_width);
-        let new_line = if distance < 0 {
-            cur_line.saturating_sub(distance.saturating_abs() as usize)
-        } else {
-            cur_line.saturating_add(distance as usize)
-        };
-        self.focused_char = self
-            .start_idx_of_line(new_line, line_width)
-            .unwrap_or(self.focused_char);
     }
 
     pub fn get_rolling_average(&self) -> usize {
@@ -279,7 +249,7 @@ impl OpenText {
                 started: self.test.start_time,
                 completed: Utc::now(),
             });
-            self.test = Test::next(&self.text, &self.test_log);
+            self.test = Test::next(self.text, &self.test_log);
         }
 
         let log_entry = &KeyPress {
@@ -289,24 +259,6 @@ impl OpenText {
         };
         self.keypress_log.push(log_entry.clone());
         self.snap_to_cursor();
-    }
-
-    pub fn lines<'a>(&'a self, line_width: u16, first: usize, num: usize) -> Vec<(usize, &'a str)> {
-        self.wrapper
-            .borrow_mut()
-            .lines(&self.text, line_width, first, num)
-    }
-
-    pub fn line_of_idx(&self, idx: usize, line_width: u16) -> usize {
-        self.wrapper
-            .borrow_mut()
-            .line_of_idx(&self.text, idx, line_width)
-    }
-
-    fn start_idx_of_line(&self, line: usize, line_width: u16) -> Option<usize> {
-        self.wrapper
-            .borrow_mut()
-            .start_idx_of_line(&self.text, line, line_width)
     }
 }
 

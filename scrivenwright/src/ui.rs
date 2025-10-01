@@ -1,4 +1,4 @@
-use crate::app::App;
+use crate::app::{App, OpenText, PlatformAdapter};
 use ratatui::{
     layout::Alignment,
     style::{Color, Style},
@@ -6,23 +6,29 @@ use ratatui::{
     Frame,
 };
 use ratatui::{prelude::*, widgets::*};
-use std::cmp;
 
-impl<'a> App<'a> {
-    pub fn render(&self, frame: &mut Frame) {
-        let state = &self.ui_state;
-        let cur_line = state.cursor_line;
-
+impl<PA: PlatformAdapter> App<PA> {
+    pub fn render(&self, text: &OpenText, frame: &mut Frame) {
+        let line_width = self
+            .settings
+            .line_width((frame.size().width).saturating_sub(2));
+        let cur_line = text.line_of_idx(text.focused_char, line_width);
         let num_rows = (frame.size().height as usize).saturating_sub(2);
         let rows_to_center = (num_rows / 2).saturating_sub(2);
         let first_line = cur_line.saturating_sub(rows_to_center);
         let first_row = rows_to_center.saturating_sub(cur_line);
+        let num_lines = num_rows - first_row;
 
-        let sidx = self.text.sample_start_index;
-        let cidx = sidx + self.text.cur_char;
-        let eidx = sidx + self.text.sample_len;
+        let sidx = text.test.start_index;
+        let cidx = sidx + text.test.cur_char;
+        let eidx = sidx + text.test.length;
         let style_char = |idx: usize, c: char| -> Span {
-            let s = c.to_string();
+            let s: String;
+            if c == '\n' && idx >= sidx && idx < eidx {
+                s = "↵".to_string();
+            } else {
+                s = c.to_string();
+            }
             if idx < sidx || idx >= eidx {
                 s.dim()
             } else if idx < cidx {
@@ -34,16 +40,17 @@ impl<'a> App<'a> {
             }
         };
 
-        let mut display_lines: Vec<Line> = Vec::new();
-        for i in first_line..cmp::min(first_line + num_rows - first_row, state.lines.len()) {
-            let t = state.lines[i]
-                .1
-                .chars()
-                .enumerate()
-                .map(|(idx, c)| style_char(state.lines[i].0 + idx, c))
-                .collect::<Vec<_>>();
-            display_lines.push(Line::from(t));
-        }
+        let display_lines: Vec<Line> = text
+            .lines(line_width, first_line, num_lines)
+            .iter()
+            .map(|(sidx, l)| {
+                let styled = l
+                    .char_indices()
+                    .map(|(idx, c)| style_char(sidx + idx, c))
+                    .collect::<Vec<_>>();
+                Line::from(styled)
+            })
+            .collect();
 
         let graph = Paragraph::new::<Text>(display_lines.into()).style(Style::default());
 
@@ -71,7 +78,7 @@ impl<'a> App<'a> {
             Block::default()
                 .title("Scrivenwright")
                 .title(
-                    block::Title::from(format!("{}", self.get_rolling_average()))
+                    block::Title::from(format!("{}", text.get_rolling_average()))
                         .alignment(Alignment::Right),
                 )
                 .borders(Borders::ALL)

@@ -13,4 +13,4 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.108"
 chrono = { version = "0.4.31", features = ["serde"] }
 deunicode = "1.4.1"
-textwrap = { path = "../textwrap/"}
+textwrap = { git = "https://github.com/JesseCSlater/textwrap/", branch = "wrap_single_line_pub"}

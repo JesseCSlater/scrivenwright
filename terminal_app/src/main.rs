@@ -2,7 +2,7 @@ use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
-use scrivenwright::app::{App, AppResult, KeyPress, Test, Text};
+use scrivenwright::app::{App, AppResult, KeyPress, OpenText, TestResult};
 use std::panic;
 use std::{env, io};
 
@@ -36,37 +36,37 @@ fn main() -> AppResult<()> {
 
     let book_text = file_sys::load_book(&book_title).expect("Failed to load book");
 
-    let tests = file_sys::load_tests(&book_title).expect("Failed to load tests");
+    let test_log = file_sys::load_tests(&book_title).expect("Failed to load tests");
 
-    let save = move |tests: Vec<Test>, keypresses: Vec<KeyPress>| {
-        file_sys::save_tests(&book_title, &tests)?;
-        file_sys::save_keypresses(&book_title, &keypresses)?;
-        Ok(())
+    let save = move |tests: Vec<TestResult>, keypresses: Vec<KeyPress>| {
+        file_sys::save_tests(&book_title, &tests).unwrap();
+        file_sys::save_keypresses(&book_title, &keypresses).unwrap();
     };
 
-    let text = Text::new(&book_text, tests, save, 0, 0, 10); //TODO sample length generation should
-                                                             //be based only on the settings, the text, and the sample history
-    let mut app = App::new(terminal.size()?.width, text);
+    let mut text = OpenText::new(book_text, test_log, save);
+    let adapter = ();
+
+    let mut app = App::new(adapter);
+    let mut width = terminal.size()?.width;
 
     let events = EventHandler::new(250);
 
     terminal.hide_cursor()?;
     terminal.clear()?;
-    terminal.draw(|frame| app.render(frame))?;
+    terminal.draw(|frame| app.render(&mut text, frame))?;
 
     // Start the main loop.
     while app.running {
         // Handle events.
-        match events.next()? {
+        match events.next() {
             Event::Key(key_event) => {
-                app.handle_key_events(key_event)?;
+                app.handle_key_events(key_event, &mut text, width - 2);
             }
-            Event::Resize(width, _) => {
-                app.terminal_width = width;
-                app.rewrap();
+            Event::Resize(w, _) => {
+                width = w;
             }
         }
-        terminal.draw(|frame| app.render(frame))?;
+        terminal.draw(|frame| app.render(&mut text, frame))?;
     }
 
     terminal::disable_raw_mode()?;
