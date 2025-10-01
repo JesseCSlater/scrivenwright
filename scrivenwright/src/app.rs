@@ -91,7 +91,7 @@ impl TextWrapper {
     ) -> Vec<(usize, &'a str)> {
         self.wrap(text, line_width);
         let mut ret = Vec::new();
-        for i in first..min(self._lines.len() - 1, first + num) {
+        for i in first..min(self._lines.len(), first + num) {
             let sidx = self._lines[i].0;
             let len = self._lines[i].1;
             ret.push((sidx, &text[sidx..sidx + len]));

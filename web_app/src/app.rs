@@ -40,6 +40,22 @@ fn to_key_down(event: KeyboardEvent) -> KeyDown {
         M::Unimplemented
     };
 
+    // Don't send keys which were part of a shortcut
+    let ignored = [
+        (K::Char(')'), M::Ctrl),
+        (K::Char('0'), M::Ctrl),
+        (K::Char('-'), M::Ctrl),
+        (K::Char('_'), M::Ctrl),
+        (K::Char('+'), M::Ctrl),
+        (K::Char('='), M::Ctrl),
+    ];
+    if ignored.contains(&(code, mods)) {
+        return KeyDown {
+            code: K::Unimplemented,
+            mods: M::Unimplemented,
+        };
+    }
+
     KeyDown { code, mods }
 }
 

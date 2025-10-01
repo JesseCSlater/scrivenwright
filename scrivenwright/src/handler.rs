@@ -2,13 +2,13 @@ use crate::app::{
     App, OpenText, PlatformAdapter, DEFAULT_TEXT_WIDTH_PERCENT, FULL_TEXT_WIDTH_PERCENT,
 };
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct KeyDown {
     pub code: KeyCode,
     pub mods: KeyModifiers,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum KeyCode {
     Char(char),
     Up,
@@ -19,7 +19,7 @@ pub enum KeyCode {
     Unimplemented,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum KeyModifiers {
     Ctrl,
     Unimplemented,
@@ -37,7 +37,6 @@ impl<PA: PlatformAdapter> App<PA> {
         use KeyModifiers as M;
         match (key_press.mods, key_press.code) {
             (M::Ctrl, C::Char('c')) => self.quit(),
-            //(_, C::Char('\n')) => self.quit(),
             (M::Ctrl, C::Char('f')) => {
                 self.settings.full_text_width = !self.settings.full_text_width;
                 self.settings.text_width_percent = if self.settings.full_text_width {
