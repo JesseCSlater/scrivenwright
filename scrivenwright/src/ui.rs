@@ -1,4 +1,5 @@
-use crate::app::{App, OpenText, PlatformAdapter};
+use crate::app::{App, PlatformAdapter};
+use crate::text::OpenText;
 use ratatui::{
     layout::Alignment,
     style::{Color, Style},
@@ -12,40 +13,58 @@ impl<PA: PlatformAdapter> App<PA> {
         let line_width = self
             .settings
             .line_width((frame.size().width).saturating_sub(2));
-        let cur_line = text.line_of_idx(text.focused_char, line_width);
+        let cur_line = text
+            .line_offset_of_idx(text.focused_glyph, line_width)
+            .expect("Focused glyph outside")
+            .0;
         let num_rows = (frame.size().height as usize).saturating_sub(2);
         let rows_to_center = (num_rows / 2).saturating_sub(2);
         let first_line = cur_line.saturating_sub(rows_to_center);
         let first_row = rows_to_center.saturating_sub(cur_line);
         let num_lines = num_rows - first_row;
 
-        let sidx = text.test.start_index;
-        let cidx = sidx + text.test.cur_char;
-        let eidx = sidx + text.test.length;
-        let style_char = |idx: usize, c: char| -> Span {
-            let s: String;
-            if c == '\n' && idx >= sidx && idx < eidx {
-                s = "↵".to_string();
+        let sidx = text
+            .test
+            .map(|t| t.start_index)
+            .unwrap_or(text.focused_glyph);
+        let cidx = sidx + text.test.map(|t| t.cur_char).unwrap_or(0);
+        let eidx = sidx + text.test.map(|t| t.length).unwrap_or(0);
+        let style_char = |idx: usize, c: &str| -> Span {
+            let mut s: Span<'_>;
+            if c == "\n" && idx >= sidx && idx < eidx {
+                s = Span::raw("↵");
+            } else if c == "\n" {
+                s = Span::raw(" ");
             } else {
-                s = c.to_string();
+                s = Span::raw(c.to_string());
             }
-            if idx < sidx || idx >= eidx {
-                s.dim()
+
+            s = if idx < sidx || idx >= eidx {
+                s.dark_gray()
             } else if idx < cidx {
                 s.white()
             } else if idx == cidx {
-                s.black().bg(Color::White)
+                s.black().bg(Color::Blue)
             } else {
                 s.blue()
+            };
+            if idx == text.focused_glyph {
+                s.black().bg(Color::White)
+            } else {
+                s
             }
         };
 
         let display_lines: Vec<Line> = text
             .lines(line_width, first_line, num_lines)
             .iter()
-            .map(|(sidx, l)| {
-                let styled = l
-                    .char_indices()
+            .map(|&(sidx, eidx)| {
+                let styled = text
+                    .text
+                    .glyphs()
+                    .skip(sidx)
+                    .take(eidx - sidx)
+                    .enumerate()
                     .map(|(idx, c)| style_char(sidx + idx, c))
                     .collect::<Vec<_>>();
                 Line::from(styled)

@@ -1,9 +1,11 @@
 use crate::TERMINAL;
+
+use gloo_storage::{LocalStorage, Storage};
 use js_sys::Function;
-//use ratatui::layout::Rect;
 use ratatui::Frame;
-use scrivenwright::app::{App, KeyPress, OpenText, TestResult};
+use scrivenwright::app::App;
 use scrivenwright::handler::{KeyCode as K, KeyDown, KeyModifiers as M};
+use scrivenwright::text::{KeyPress, OpenText, TestResult};
 use std::panic;
 use wasm_bindgen::prelude::Closure;
 use yew::prelude::*;
@@ -95,13 +97,15 @@ impl Component for TermApp {
                 .into();
         window.set_onkeydown(Some(&func));
 
-        let book_text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras ultrices imperdiet augue et facilisis. Duis dignissim libero eros, eu sagittis purus suscipit at. Vivamus sit amet bibendum ex. Ut convallis velit id odio tincidunt fringilla. Mauris interdum eleifend sapien, vitae luctus sem. Sed suscipit ultrices metus, ut iaculis urna sagittis vel. Ut elementum nisi ac diam mattis, non condimentum urna pretium. Proin hendrerit metus sed pretium lacinia. Praesent a purus rhoncus odio imperdiet blandit quis quis risus. Aliquam euismod, eros at congue laoreet, sem mi pellentesque augue, et dictum magna augue eget lectus. Nam ultrices justo justo, quis gravida justo semper eget. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Nunc hendrerit massa sed fringilla laoreet. In id quam tincidunt sem laoreet aliquet molestie a lacus. Donec felis dui, tempus tincidunt laoreet ut, convallis quis mauris. ".into();
-
+        let book_text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras ultrices imperdiet augue et facilisis. Duis dignissim libero eros, eu sagittis purus suscipit at. Vivamus sit amet bibendum ex. Ut convallis velit id odio tincidunt fringilla. Mauris interdum eleifend sapien, vitae luctus sem. Sed suscipit ultrices metus, ut iaculis urna sagittis vel. Ut elementum nisi ac diam mattis, non condimentum urna pretium. Proin hendrerit metus sed pretium lacinia. Praesent a purus rhoncus odio imperdiet blandit quis quis risus. Aliquam euismod, eros at congue laoreet, sem mi pellentesque augue, et dictum magna augue eget lectus. Nam ultrices justo justo, quis gravida justo semper eget. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Nunc hendrerit massa sed fringilla laoreet. In id quam tincidunt sem laoreet aliquet molestie a lacus. Donec felis dui, tempus tincidunt laoreet ut, convallis quis mauris.";
         let tests = Vec::new();
 
-        let save = move |_tests: Vec<TestResult>, _keypresses: Vec<KeyPress>| ();
+        let save = move |tests: TestResult, _keypresses: Vec<KeyPress>| {
+            LocalStorage::set("lorem.test_result", &tests).expect("failed to set");
+            LocalStorage::set("lorem.keypresses", &tests).expect("failed to set");
+        };
 
-        let text = OpenText::new(book_text, tests, save);
+        let text = OpenText::new(book_text.into(), tests, save);
         let app = App::new(());
 
         Self { app, text }

@@ -1,12 +1,16 @@
-use deunicode::deunicode;
 use regex::Regex;
-use scrivenwright::app::{AppResult, KeyPress, TestResult};
-use std::{fs, io::Read, io::Write, path::PathBuf};
+use scrivenwright::app::AppResult;
+use scrivenwright::text::{KeyPress, TestResult};
+use std::{
+    fs,
+    io::{BufRead, BufReader, Read, Write},
+    path::PathBuf,
+};
 
 static SW_DIR: &str = "scrivenwright";
 
 fn sw_dir() -> PathBuf {
-    dirs::home_dir().unwrap().join(SW_DIR)
+    dirs::home_dir().expect("no home dir").join(SW_DIR)
 }
 
 fn book_file(book_title: &str) -> PathBuf {
@@ -17,11 +21,11 @@ fn book_dir(book_title: &str) -> PathBuf {
     sw_dir().join(book_title)
 }
 
-fn test_dir(book_title: &str) -> PathBuf {
+fn test_file(book_title: &str) -> PathBuf {
     book_dir(book_title).join("tests.json")
 }
 
-fn keypress_dir(book_title: &str) -> PathBuf {
+fn keypress_file(book_title: &str) -> PathBuf {
     book_dir(book_title).join("keypresses.json")
 }
 
@@ -31,10 +35,11 @@ pub fn create_book_dir(book_title: &str) {
 
 pub fn load_book(book_title: &str) -> AppResult<String> {
     let mut book: String = fs::read_to_string(book_file(book_title))?;
-
     let rules: Vec<(Regex, &str)> = vec![
         //Remove carriage returns
         (Regex::new(r"\r").unwrap(), ""),
+        //Remove trailing newline
+        (Regex::new(r"\r?\n$").unwrap(), ""),
         //Remove new lines within paragraphs
         (Regex::new(r"([^\n])\n([^\n])").unwrap(), "$1 $2"),
         //Remove duplicate spaces
@@ -48,24 +53,38 @@ pub fn load_book(book_title: &str) -> AppResult<String> {
 }
 
 pub fn load_tests(book_title: &str) -> AppResult<Vec<TestResult>> {
-    let mut test_log = fs::OpenOptions::new()
-        .create(true)
+    let file = fs::OpenOptions::new()
         .read(true)
         .write(true)
-        .open(test_dir(book_title))
-        .expect("Failed to open tests file");
-    let mut string = String::new();
-    test_log.read_to_string(&mut string)?;
-    Ok(serde_json::from_str(&string).unwrap_or(Vec::new()))
+        .create(true)
+        .open(test_file(book_title))?;
+
+    let reader = BufReader::new(file);
+    let mut results = Vec::new();
+
+    for line in reader.lines() {
+        let line = line?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        if let Ok(test) = serde_json::from_str::<TestResult>(&line) {
+            results.push(test);
+        }
+    }
+
+    Ok(results)
 }
 
-pub fn save_tests(book_title: &str, tests: &Vec<TestResult>) -> AppResult<()> {
+pub fn save_test(book_title: &str, test: &TestResult) -> AppResult<()> {
     let mut test_log = fs::OpenOptions::new()
         .create(true)
-        .write(true)
-        .open(test_dir(book_title))?;
-    let bytes = serde_json::to_vec(tests)?;
-    test_log.write(&bytes)?;
+        .append(true)
+        .open(test_file(book_title))
+        .unwrap();
+
+    let bytes = serde_json::to_vec(test)?;
+    test_log.write_all(&bytes)?;
+    test_log.write_all(b"\n")?;
     Ok(())
 }
 
@@ -73,7 +92,7 @@ pub fn load_keypresses(book_title: &str) -> AppResult<Vec<KeyPress>> {
     let mut key_press_log = fs::OpenOptions::new()
         .create(true)
         .read(true)
-        .open(keypress_dir(book_title))
+        .open(keypress_file(book_title))
         .expect("Failed to open keypress file");
     let mut string = String::new();
     key_press_log.read_to_string(&mut string)?;
@@ -84,7 +103,7 @@ pub fn save_keypresses(book_title: &str, keypresses: &Vec<KeyPress>) -> AppResul
     let mut key_press_log = fs::OpenOptions::new()
         .create(true)
         .write(true)
-        .open(keypress_dir(book_title))?;
+        .open(keypress_file(book_title))?;
     let bytes = serde_json::to_vec(keypresses)?;
     key_press_log.write(&bytes)?;
     Ok(())

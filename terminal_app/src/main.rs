@@ -2,7 +2,8 @@ use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
-use scrivenwright::app::{App, AppResult, KeyPress, OpenText, TestResult};
+use scrivenwright::app::{App, AppResult};
+use scrivenwright::text::{KeyPress, OpenText, TestResult};
 use std::panic;
 use std::{env, io};
 
@@ -38,8 +39,8 @@ fn main() -> AppResult<()> {
 
     let test_log = file_sys::load_tests(&book_title).expect("Failed to load tests");
 
-    let save = move |tests: Vec<TestResult>, keypresses: Vec<KeyPress>| {
-        file_sys::save_tests(&book_title, &tests).unwrap();
+    let save = move |test: TestResult, keypresses: Vec<KeyPress>| {
+        file_sys::save_test(&book_title, &test).unwrap();
         file_sys::save_keypresses(&book_title, &keypresses).unwrap();
     };
 

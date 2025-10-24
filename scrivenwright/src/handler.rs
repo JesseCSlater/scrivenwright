@@ -1,6 +1,7 @@
-use crate::app::{
-    App, OpenText, PlatformAdapter, DEFAULT_TEXT_WIDTH_PERCENT, FULL_TEXT_WIDTH_PERCENT,
-};
+use crate::app::{App, PlatformAdapter};
+use crate::settings::{DEFAULT_TEXT_WIDTH_PERCENT, FULL_TEXT_WIDTH_PERCENT};
+use crate::text::OpenText;
+use crate::text_wrapper::Dir;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct KeyDown {
@@ -46,17 +47,17 @@ impl<PA: PlatformAdapter> App<PA> {
                 };
             }
             (_, C::Char(c)) => text.handle_char(c),
-            (M::Ctrl, C::Up) => {
-                text.scroll(self.settings.line_width(terminal_width), -10);
-            }
-            (M::Ctrl, C::Down) => {
-                text.scroll(self.settings.line_width(terminal_width), 10);
-            }
             (_, C::Up) => {
-                text.scroll(self.settings.line_width(terminal_width), -1);
+                text.move_cursor(self.settings.line_width(terminal_width), Dir::Up);
             }
             (_, C::Down) => {
-                text.scroll(self.settings.line_width(terminal_width), 1);
+                text.move_cursor(self.settings.line_width(terminal_width), Dir::Down);
+            }
+            (_, C::Left) => {
+                text.move_cursor(self.settings.line_width(terminal_width), Dir::Left);
+            }
+            (_, C::Right) => {
+                text.move_cursor(self.settings.line_width(terminal_width), Dir::Right);
             }
             (_, C::Esc) => text.snap_to_cursor(),
             _ => {}
